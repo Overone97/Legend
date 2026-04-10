@@ -433,9 +433,9 @@
       '4,5': 'forest', '5,5': 'plains', '6,5': 'road', '7,5': 'road'
     };
     const ENCOUNTER_CONFIG = {
-      '2,2': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, xp: 18, color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, description: 'Une attaque sale mais encore gérable.' } },
-      '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, description: 'Une frappe violente pour les zones dangereuses.' } },
-      '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, description: 'Un projectile rapide qui punit les distances mal gérées.' } },
+      '2,2': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, xp: 18, resources: [{ key: 'bois_sombre', name: 'Bois sombre', qty: 2 }], color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, description: 'Une attaque sale mais encore gérable.' } },
+      '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, resources: [{ key: 'griffe_noire', name: 'Griffe noire', qty: 1 }, { key: 'peau_rapee', name: 'Peau râpée', qty: 2 }], color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, description: 'Une frappe violente pour les zones dangereuses.' } },
+      '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, resources: [{ key: 'fer_use', name: 'Fer usé', qty: 2 }], color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, description: 'Un projectile rapide qui punit les distances mal gérées.' } },
     };
 
     const WORLD_POI = {
@@ -534,6 +534,7 @@
           class: payload.class,
           level: 1,
           xp: 0,
+          inventory: {},
           hp: 100,
           mapId: STARTING_POSITION.mapId,
           x: STARTING_POSITION.x,
@@ -601,6 +602,7 @@
         return (data || []).map(character => ({
           level: 1,
           xp: 0,
+          inventory: {},
           hp: 100,
           mapId: STARTING_POSITION.mapId,
           x: STARTING_POSITION.x,
@@ -869,7 +871,12 @@
           const levelUp = nextXp >= (this.currentCharacter.level || 1) * 100;
           this.currentCharacter.xp = levelUp ? nextXp - ((this.currentCharacter.level || 1) * 100) : nextXp;
           if (levelUp) this.currentCharacter.level = (this.currentCharacter.level || 1) + 1;
-          this.lastReward = { xp: gainedXp, levelUp };
+          const resources = this.currentEncounter?.resources || [];
+          this.currentCharacter.inventory = this.currentCharacter.inventory || {};
+          resources.forEach(resource => {
+            this.currentCharacter.inventory[resource.key] = (this.currentCharacter.inventory[resource.key] || 0) + resource.qty;
+          });
+          this.lastReward = { xp: gainedXp, levelUp, resources };
         } else {
           this.lastReward = null;
         }
@@ -1263,7 +1270,7 @@
       if (result === 'victory' && character) {
         WORLD_ENCOUNTERS.delete(`${character.x ?? 0},${character.y ?? 0}`);
         const rewardText = game.lastReward
-          ? `Victoire. +${game.lastReward.xp} XP${game.lastReward.levelUp ? ' et niveau gagné' : ''}.`
+          ? `Victoire. +${game.lastReward.xp} XP${game.lastReward.levelUp ? ' et niveau gagné' : ''}${game.lastReward.resources?.length ? `, butin: ${game.lastReward.resources.map(r => `+${r.qty} ${r.name}`).join(', ')}` : ''}.`
           : 'Victoire. La zone est sécurisée pour le moment.';
         setMessage('worldMessage', rewardText, 'ok');
       } else if (result === 'defeat') {
