@@ -469,7 +469,7 @@
 
     const STARTING_POSITION = { x: 0, y: 0, mapId: 'Bourg-Legend' };
     const SAFE_ZONE = new Set(['0,0', '0,1', '0,2', '1,0', '1,1', '1,2']);
-    const INITIAL_WORLD_ENCOUNTERS = ['2,2', '4,5', '7,3'];
+    const INITIAL_WORLD_ENCOUNTERS = ['2,2', '4,5', '7,3', '4,1', '6,3'];
     const WORLD_ENCOUNTERS = new Set(INITIAL_WORLD_ENCOUNTERS);
     const WORLD_TILE_TYPES = {
       '0,0': 'safe', '1,0': 'road', '2,0': 'road', '3,0': 'road', '4,0': 'plains',
@@ -480,9 +480,11 @@
       '4,5': 'forest', '5,5': 'plains', '6,5': 'road', '7,5': 'road'
     };
     const ENCOUNTER_CONFIG = {
-      '2,2': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, xp: 18, resources: [{ key: 'bois_sombre', name: 'Bois sombre', qty: 2 }], color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, description: 'Une attaque sale mais encore gérable.' } },
-      '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, resources: [{ key: 'griffe_noire', name: 'Griffe noire', qty: 1 }, { key: 'peau_rapee', name: 'Peau râpée', qty: 2 }], color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, description: 'Une frappe violente pour les zones dangereuses.' } },
-      '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, resources: [{ key: 'fer_use', name: 'Fer usé', qty: 2 }], color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, description: 'Un projectile rapide qui punit les distances mal gérées.' } },
+      '2,2': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, xp: 18, resources: [{ key: 'bois_sombre', name: 'Bois sombre', qty: 2 }], color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, element: 'terre', description: 'Une attaque sale mais encore gérable.' } },
+      '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, resources: [{ key: 'griffe_noire', name: 'Griffe noire', qty: 1 }, { key: 'peau_rapee', name: 'Peau râpée', qty: 2 }], color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, element: 'terre', description: 'Une frappe violente pour les zones dangereuses.' } },
+      '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, resources: [{ key: 'fer_use', name: 'Fer usé', qty: 2 }], color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, element: 'air', description: 'Un projectile rapide qui punit les distances mal gérées.' } },
+      '4,1': { name: 'Ondine des rives', hp: 88, ap: 6, mp: 4, speed: 9, xp: 24, resources: [{ key: 'perle_froide', name: 'Perle froide', qty: 1 }], color: '#0ea5e9', skill: { name: 'Jet d’écume', costAP: 4, range: 3, damage: 20, element: 'eau', description: 'Une attaque d’eau vive qui use à distance.' } },
+      '6,3': { name: 'Cendrelame', hp: 105, ap: 7, mp: 3, speed: 10, xp: 32, resources: [{ key: 'braise_tiede', name: 'Braise tiède', qty: 2 }], color: '#dc2626', skill: { name: 'Lame ardente', costAP: 5, range: 2, damage: 24, element: 'feu', description: 'Une coupe embrasée qui annonce des ennemis plus agressifs.' } },
     };
 
     const CRAFT_RECIPES = [
@@ -549,8 +551,13 @@
       },
       '4,1': {
         name: 'Rive bleue',
-        type: 'Point naturel',
-        description: 'Un bord d’eau calme, utile pour donner du relief au monde et casser la monotonie.',
+        type: 'Zone aquatique',
+        description: 'Un bord d’eau calme en apparence, mais parfait pour introduire des menaces liées à l’élément eau.',
+      },
+      '6,3': {
+        name: 'Clairière des braises',
+        type: 'Zone élémentaire feu',
+        description: 'Un terrain plus chaud, plus sec, où les ennemis commencent à brûler autant qu’ils frappent.',
       }
     };
 
