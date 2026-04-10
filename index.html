@@ -208,6 +208,10 @@
     .world-tile.adjacent {
       background: #1e3a5f;
     }
+    .world-tile.encounter {
+      background: #4c1d1d;
+      border-color: rgba(248,113,113,0.4);
+    }
     .section h3 { font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; margin: 0; }
     .class-card {
       border: 1px solid rgba(255,255,255,0.08);
@@ -403,6 +407,8 @@
       session: 'legend_session_v1',
       selectedCharacter: 'legend_selected_character_v1',
     };
+
+    const WORLD_ENCOUNTERS = new Set(['2,2', '4,5', '7,3']);
 
     const localAccountStore = {
       getAll() {
@@ -968,6 +974,8 @@
         const tx = index % 10;
         const ty = Math.floor(index / 10);
         const classes = ['world-tile'];
+        const encounterKey = `${tx},${ty}`;
+        if (WORLD_ENCOUNTERS.has(encounterKey)) classes.push('encounter');
         if (tx === x && ty === y) classes.push('active');
         else if (isAdjacent(tx, ty)) classes.push('adjacent');
         return `<button class="${classes.join(' ')}" data-x="${tx}" data-y="${ty}">${tx},${ty}</button>`;
@@ -997,7 +1005,7 @@
           <span class="badge">X ${character.x ?? 0}</span>
           <span class="badge">Y ${character.y ?? 0}</span>
         </div>
-        <div class="hint">Prototype de carte cliquable, dans l'esprit d'une exploration tactique lisible.</div>
+        <div class="hint">Prototype de carte cliquable, dans l'esprit d'une exploration tactique lisible. Les cases rouges déclenchent une rencontre.</div>
       `;
       renderWorldGrid();
     }
@@ -1104,7 +1112,16 @@
       character.x = targetX;
       character.y = targetY;
       character.mapId = character.mapId || 'training-ground';
+      const positionKey = `${character.x},${character.y}`;
       document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • position ${character.x}, ${character.y}`;
+      if (WORLD_ENCOUNTERS.has(positionKey)) {
+        setMessage('worldMessage', `Embuscade en ${positionKey} ! Passage en combat.`, 'ok');
+        renderWorldPreview();
+        switchView('combatView');
+        game.setCharacter(character);
+        game.startBattle();
+        return;
+      }
       setMessage('worldMessage', `${character.name} se déplace en ${character.x}, ${character.y}.`, 'ok');
       renderWorldPreview();
     }
