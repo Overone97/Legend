@@ -471,10 +471,25 @@
     };
 
     const CRAFT_RECIPES = [
-      { key: 'amulette_bois', name: 'Amulette en bois sombre', costs: [{ key: 'bois_sombre', qty: 2 }], reward: { key: 'amulette_bois', name: 'Amulette en bois sombre', qty: 1, slot: 'amulette' } },
-      { key: 'dagues_usees', name: 'Dagues usées', costs: [{ key: 'fer_use', qty: 2 }], reward: { key: 'dagues_usees', name: 'Dagues usées', qty: 1, slot: 'arme' } },
-      { key: 'cape_rapee', name: 'Cape râpée', costs: [{ key: 'peau_rapee', qty: 2 }, { key: 'griffe_noire', qty: 1 }], reward: { key: 'cape_rapee', name: 'Cape râpée', qty: 1, slot: 'cape' } },
+      { key: 'amulette_bois', name: 'Amulette en bois sombre', costs: [{ key: 'bois_sombre', qty: 2 }], reward: { key: 'amulette_bois', name: 'Amulette en bois sombre', qty: 1, slot: 'amulette', set: 'forestier' } },
+      { key: 'dagues_usees', name: 'Dagues usées', costs: [{ key: 'fer_use', qty: 2 }], reward: { key: 'dagues_usees', name: 'Dagues usées', qty: 1, slot: 'arme', set: 'roadrunner' } },
+      { key: 'cape_rapee', name: 'Cape râpée', costs: [{ key: 'peau_rapee', qty: 2 }, { key: 'griffe_noire', qty: 1 }], reward: { key: 'cape_rapee', name: 'Cape râpée', qty: 1, slot: 'cape', set: 'forestier' } },
     ];
+
+    const SET_BONUSES = {
+      forestier: {
+        name: 'Panoplie forestière',
+        bonuses: {
+          2: '+10 PV et +5 dégâts',
+        },
+      },
+      roadrunner: {
+        name: 'Panoplie du rôdeur',
+        bonuses: {
+          1: '+1 mobilité narrative',
+        },
+      },
+    };
 
     const WORLD_POI = {
       '0,0': {
@@ -1163,7 +1178,7 @@
       });
       character.inventory[recipe.reward.key] = (character.inventory[recipe.reward.key] || 0) + recipe.reward.qty;
       setMessage('craftMessage', `${recipe.reward.name} fabriqué.`, 'ok');
-      document.getElementById('craftPreview').innerHTML = `<h4>${recipe.reward.name}</h4><div class="badge-row"><span class="badge">Slot ${recipe.reward.slot}</span></div><div class="hint">Premier objet crafté. La suite logique sera l’équipement et les bonus de panoplie.</div>`;
+      document.getElementById('craftPreview').innerHTML = `<h4>${recipe.reward.name}</h4><div class="badge-row"><span class="badge">Slot ${recipe.reward.slot}</span><span class="badge">Set ${recipe.reward.set || 'aucun'}</span></div><div class="hint">Premier objet crafté. La suite logique sera l’équipement et les bonus de panoplie.</div>`;
       renderCraft();
       renderInventory();
     }
@@ -1208,6 +1223,19 @@
         <div class="hint">Base d’inventaire prête pour le craft et les équipements.</div>
       `;
       const equipment = character.equipment || { arme: null, amulette: null, cape: null };
+      const equippedRecipes = CRAFT_RECIPES.filter(recipe => Object.values(equipment).includes(recipe.reward.name));
+      const setCounts = equippedRecipes.reduce((acc, recipe) => {
+        if (!recipe.reward.set) return acc;
+        acc[recipe.reward.set] = (acc[recipe.reward.set] || 0) + 1;
+        return acc;
+      }, {});
+      const activeBonuses = Object.entries(setCounts).flatMap(([setKey, count]) => {
+        const setData = SET_BONUSES[setKey];
+        if (!setData) return [];
+        return Object.entries(setData.bonuses)
+          .filter(([pieces]) => count >= Number(pieces))
+          .map(([, bonus]) => `${setData.name}: ${bonus}`);
+      });
       document.getElementById('equipmentPreview').innerHTML = `
         <h4>Équipement</h4>
         <div class="badge-row">
@@ -1215,6 +1243,7 @@
           <span class="badge">Amulette: ${equipment.amulette || 'vide'}</span>
           <span class="badge">Cape: ${equipment.cape || 'vide'}</span>
         </div>
+        <div class="hint">${activeBonuses.length ? activeBonuses.join(' • ') : 'Aucun bonus de panoplie actif.'}</div>
       `;
     }
 
