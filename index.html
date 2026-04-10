@@ -458,6 +458,21 @@
         type: 'Route guidée',
         description: 'Une continuité rassurante entre la ville sûre et les premières zones un peu plus hostiles.',
       },
+      '3,3': {
+        name: 'Lisière d’entraînement',
+        type: 'Zone d’apprentissage',
+        description: 'Les premiers vrais pas hors protection. Assez calme pour apprendre, pas assez calme pour dormir.',
+      },
+      '4,3': {
+        name: 'Bois des heurts',
+        type: 'Zone de risque moyen',
+        description: 'On sent tout de suite que les choses deviennent moins gentilles. Ici, tu n’es plus vraiment chez toi.',
+      },
+      '4,5': {
+        name: 'Fourré des pertes',
+        type: 'Zone dangereuse',
+        description: 'Une poche plus profonde de danger. Si tu y vas trop tôt, tu vas le sentir passer.',
+      },
       '4,1': {
         name: 'Rive bleue',
         type: 'Point naturel',
@@ -1072,6 +1087,13 @@
       const key = `${character.x ?? 0},${character.y ?? 0}`;
       const poi = WORLD_POI[key];
       const isSafeZone = SAFE_ZONE.has(key);
+      const zoneHint = key === '3,3'
+        ? 'Tu quittes doucement la zone d’apprentissage.'
+        : key === '4,3'
+          ? 'Attention, la pression monte ici.'
+          : key === '4,5'
+            ? 'Zone franchement dangereuse. Mieux vaut être prêt.'
+            : '';
       preview.innerHTML = `
         <h4>${character.name}</h4>
         <div class="badge-row">
@@ -1087,6 +1109,8 @@
         : `<div class="hint">${isSafeZone ? 'Zone sûre autour de Bourg-Legend.' : 'Aucun point d’intérêt notable sur cette case.'}</div>`;
       if (key === '0,0') {
         setMessage('worldMessage', 'Tu es à Bourg-Legend. Suis la route vers l’est pour quitter la ville.', 'ok');
+      } else if (zoneHint) {
+        setMessage('worldMessage', zoneHint, key === '4,5' ? 'error' : 'ok');
       }
       renderWorldGrid();
     }
