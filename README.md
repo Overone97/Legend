@@ -35,6 +35,7 @@ Valider un noyau de combat tactique fun et lisible avec :
 - CSS
 - JavaScript natif
 - Canvas 2D
+- Supabase (auth + persistance, en cours de branchement)
 
 ## Philosophie technique
 
