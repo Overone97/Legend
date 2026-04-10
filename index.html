@@ -349,6 +349,7 @@
     const STORAGE_KEYS = {
       accounts: 'legend_accounts_v1',
       session: 'legend_session_v1',
+      selectedCharacter: 'legend_selected_character_v1',
     };
 
     const localAccountStore = {
@@ -462,7 +463,12 @@
           .eq('user_id', currentAccount.id)
           .order('created_at');
         if (error) throw error;
-        return data || [];
+        return (data || []).map(character => ({
+          level: 1,
+          hp: 100,
+          mapId: 'training-ground',
+          ...character,
+        }));
       },
       async createCharacter(payload) {
         const currentAccount = await this.current();
@@ -768,6 +774,25 @@
 
     const game = new Game();
 
+    function getSelectedCharacterKey(accountId) {
+      return `${STORAGE_KEYS.selectedCharacter}:${accountId}`;
+    }
+
+    function readSelectedCharacterId(accountId) {
+      if (!accountId) return null;
+      return localStorage.getItem(getSelectedCharacterKey(accountId));
+    }
+
+    function writeSelectedCharacterId(accountId, characterId) {
+      if (!accountId) return;
+      const key = getSelectedCharacterKey(accountId);
+      if (!characterId) {
+        localStorage.removeItem(key);
+        return;
+      }
+      localStorage.setItem(key, characterId);
+    }
+
     function setMessage(id, text, ok = false) {
       const el = document.getElementById(id);
       el.textContent = text;
@@ -797,23 +822,33 @@
 
       document.getElementById('accountNameDisplay').textContent = `Compte : ${account.accountName}`;
       list.innerHTML = characters.length
-        ? characters.map((char, index) => `
-            <div class="char-card ${index === 0 ? 'active' : ''}" data-char-id="${char.id}">
+        ? characters.map(char => `
+            <div class="char-card" data-char-id="${char.id}">
               <strong>${char.name}</strong><br>
               <small>${char.class.toUpperCase()} • niveau ${char.level} • ${char.mapId}</small>
             </div>
           `).join('')
-        : '<div class="hint">Aucun personnage. Crée le premier à droite.</div>';
+        : '<div class="hint">Aucun personnage. Crée le premier à droite pour peupler ce compte.</div>';
 
       const cards = [...list.querySelectorAll('.char-card')];
-      let selectedId = cards[0]?.dataset.charId || null;
+      let selectedId = readSelectedCharacterId(account.id);
+      if (!characters.some(c => c.id === selectedId)) {
+        selectedId = cards[0]?.dataset.charId || null;
+      }
       const applySelection = () => {
         cards.forEach(card => card.classList.toggle('active', card.dataset.charId === selectedId));
         const selected = characters.find(c => c.id === selectedId) || null;
+        writeSelectedCharacterId(account.id, selected?.id || null);
         game.setCharacter(selected);
-        document.getElementById('shellStatus').textContent = selected ? `Personnage actif : ${selected.name} (${selected.class})` : 'Aucun personnage sélectionné';
+        document.getElementById('shellStatus').textContent = selected
+          ? `Personnage actif : ${selected.name} (${selected.class})`
+          : 'Aucun personnage sélectionné';
+        document.getElementById('playCharacterBtn').disabled = !selected;
       };
-      cards.forEach(card => card.addEventListener('click', () => { selectedId = card.dataset.charId; applySelection(); }));
+      cards.forEach(card => card.addEventListener('click', () => {
+        selectedId = card.dataset.charId;
+        applySelection();
+      }));
       applySelection();
 
       document.getElementById('playCharacterBtn').onclick = () => {
@@ -882,13 +917,17 @@
         const name = document.getElementById('characterNameInput').value.trim();
         const klass = document.getElementById('characterClassSelect').value;
         if (name.length < 3) throw new Error('Nom de personnage trop court.');
+        if (name.length > 16) throw new Error('Nom de personnage trop long.');
+        if (!/^[a-zA-ZÀ-ÿ0-9_-]+$/.test(name)) throw new Error('Nom invalide. Utilise lettres, chiffres, _ ou -.');
+        let createdCharacter;
         if (supabaseClient) {
-          await accountStore.createCharacter({ name, class: klass });
+          createdCharacter = await accountStore.createCharacter({ name, class: klass });
         } else {
-          accountStore.createCharacter(account.id, { name, class: klass });
+          createdCharacter = accountStore.createCharacter(account.id, { name, class: klass });
         }
         document.getElementById('characterNameInput').value = '';
-        setMessage('characterMessage', 'Personnage créé.', true);
+        writeSelectedCharacterId(account.id, createdCharacter?.id || null);
+        setMessage('characterMessage', 'Personnage créé et sélectionné.', true);
         await renderCharacters();
       } catch (err) {
         setMessage('characterMessage', err.message);
@@ -896,11 +935,13 @@
     };
 
     document.getElementById('logoutBtn').onclick = async () => {
+      const currentAccount = await accountStore.current().catch(() => null);
       if (supabaseClient) {
         await accountStore.signOut();
       } else {
         accountStore.logout();
       }
+      writeSelectedCharacterId(currentAccount?.id, null);
       setMessage('loginMessage', '');
       setMessage('registerMessage', '');
       setMessage('characterMessage', '');
