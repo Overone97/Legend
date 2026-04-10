@@ -488,22 +488,22 @@
     };
 
     const CRAFT_RECIPES = [
-      { key: 'amulette_bois', name: 'Amulette en bois sombre', costs: [{ key: 'bois_sombre', qty: 2 }], reward: { key: 'amulette_bois', name: 'Amulette en bois sombre', qty: 1, slot: 'amulette', set: 'forestier' } },
-      { key: 'dagues_usees', name: 'Dagues usées', costs: [{ key: 'fer_use', qty: 2 }], reward: { key: 'dagues_usees', name: 'Dagues usées', qty: 1, slot: 'arme', set: 'roadrunner' } },
-      { key: 'cape_rapee', name: 'Cape râpée', costs: [{ key: 'peau_rapee', qty: 2 }, { key: 'griffe_noire', qty: 1 }], reward: { key: 'cape_rapee', name: 'Cape râpée', qty: 1, slot: 'cape', set: 'forestier' } },
+      { key: 'amulette_bois', name: 'Amulette en bois sombre', costs: [{ key: 'bois_sombre', qty: 2 }], reward: { key: 'amulette_bois', name: 'Amulette en bois sombre', qty: 1, slot: 'amulette', set: 'forestier', resistances: { terre: 5 } } },
+      { key: 'dagues_usees', name: 'Dagues usées', costs: [{ key: 'fer_use', qty: 2 }], reward: { key: 'dagues_usees', name: 'Dagues usées', qty: 1, slot: 'arme', set: 'roadrunner', resistances: { air: 5 } } },
+      { key: 'cape_rapee', name: 'Cape râpée', costs: [{ key: 'peau_rapee', qty: 2 }, { key: 'griffe_noire', qty: 1 }], reward: { key: 'cape_rapee', name: 'Cape râpée', qty: 1, slot: 'cape', set: 'forestier', resistances: { feu: 5 } } },
     ];
 
     const SET_BONUSES = {
       forestier: {
         name: 'Panoplie forestière',
         bonuses: {
-          2: { label: '+10 PV et +5 dégâts', stats: { maxHp: 10, bonusDamage: 5 } },
+          2: { label: '+10 PV, +5 dégâts et +5% terre', stats: { maxHp: 10, bonusDamage: 5, terre: 5 } },
         },
       },
       roadrunner: {
         name: 'Panoplie du rôdeur',
         bonuses: {
-          1: { label: '+1 PM', stats: { mp: 1 } },
+          1: { label: '+1 PM et +5% air', stats: { mp: 1, air: 5 } },
         },
       },
     };
@@ -793,6 +793,12 @@
     function getCharacterCombatBonuses(character) {
       const equipment = character?.equipment || { arme: null, amulette: null, cape: null };
       const equippedRecipes = CRAFT_RECIPES.filter(recipe => Object.values(equipment).includes(recipe.reward.name));
+      const baseStats = equippedRecipes.reduce((stats, recipe) => {
+        Object.entries(recipe.reward.resistances || {}).forEach(([statKey, value]) => {
+          stats[statKey] = (stats[statKey] || 0) + value;
+        });
+        return stats;
+      }, {});
       const setCounts = equippedRecipes.reduce((acc, recipe) => {
         if (!recipe.reward.set) return acc;
         acc[recipe.reward.set] = (acc[recipe.reward.set] || 0) + 1;
@@ -809,7 +815,7 @@
           }
         });
         return stats;
-      }, {});
+      }, baseStats);
     }
 
     class Game {
@@ -881,7 +887,7 @@
         const combatBonuses = getCharacterCombatBonuses(this.currentCharacter || {});
         const elementBonusMap = { terre: attributes.force || 0, feu: attributes.intelligence || 0, eau: attributes.chance || 0, air: attributes.agilite || 0 };
         const boostedSkill = new Skill({ ...classFromCharacter.skill, damage: classFromCharacter.skill.damage + (combatBonuses.bonusDamage || 0) + Math.floor((elementBonusMap[classFromCharacter.skill.element] || 0) / 2) });
-        this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, maxHp: classFromCharacter.stats.maxHp + (combatBonuses.maxHp || 0) + ((attributes.vitalite || 0) * 2), ap: classFromCharacter.stats.ap, mp: classFromCharacter.stats.mp + (combatBonuses.mp || 0), speed: classFromCharacter.stats.speed, color: classFromCharacter.stats.color, skill: boostedSkill, resistances: { terre: 0, feu: 0, eau: 0, air: 0 } });
+        this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, maxHp: classFromCharacter.stats.maxHp + (combatBonuses.maxHp || 0) + ((attributes.vitalite || 0) * 2), ap: classFromCharacter.stats.ap, mp: classFromCharacter.stats.mp + (combatBonuses.mp || 0), speed: classFromCharacter.stats.speed, color: classFromCharacter.stats.color, skill: boostedSkill, resistances: { terre: combatBonuses.terre || 0, feu: combatBonuses.feu || 0, eau: combatBonuses.eau || 0, air: combatBonuses.air || 0 } });
         this.enemy = new Entity({ id: 'enemy', name: encounterData.name, team: 'enemy', x: 6, y: 1, maxHp: encounterData.hp, ap: encounterData.ap, mp: encounterData.mp, speed: encounterData.speed, color: encounterData.color, skill: new Skill(encounterData.skill), resistances: encounterData.resistances || {} });
         this.turnOrder = [this.player, this.enemy].sort((a, b) => b.speed - a.speed);
         this.activeEntityIndex = 0;
