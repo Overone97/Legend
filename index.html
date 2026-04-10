@@ -147,6 +147,18 @@
     .char-card small { color: var(--muted); }
 
     .create-card { display: grid; gap: 12px; }
+    .class-preview {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .class-preview h4 {
+      margin: 0;
+      font-size: 18px;
+    }
     .badge-row { display: flex; gap: 8px; flex-wrap: wrap; }
     .badge {
       background: rgba(255,255,255,0.06);
@@ -281,6 +293,7 @@
               <option value="archer">Archer</option>
             </select>
           </div>
+          <div class="class-preview" id="characterClassPreview"></div>
           <div class="message" id="characterMessage"></div>
           <button id="createCharacterBtn">Créer ce personnage</button>
           <button id="playCharacterBtn" class="secondary">Jouer avec ce personnage</button>
@@ -774,6 +787,27 @@
 
     const game = new Game();
 
+    function getClassPreviewData(classKey) {
+      return game.classes[classKey] || game.classes.warrior;
+    }
+
+    function renderCharacterClassPreview() {
+      const classKey = document.getElementById('characterClassSelect').value;
+      const klass = getClassPreviewData(classKey);
+      const preview = document.getElementById('characterClassPreview');
+      preview.innerHTML = `
+        <h4>${klass.name}</h4>
+        <div class="badge-row">
+          <span class="badge">HP ${klass.stats.maxHp}</span>
+          <span class="badge">AP ${klass.stats.ap}</span>
+          <span class="badge">MP ${klass.stats.mp}</span>
+          <span class="badge">SPD ${klass.stats.speed}</span>
+        </div>
+        <div><strong>${klass.skill.name}</strong></div>
+        <div class="hint">${klass.flavor} ${klass.skill.description}</div>
+      `;
+    }
+
     function getSelectedCharacterKey(accountId) {
       return `${STORAGE_KEYS.selectedCharacter}:${accountId}`;
     }
@@ -868,6 +902,8 @@
     }
 
     document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => switchView(tab.dataset.view)));
+    document.getElementById('characterClassSelect').addEventListener('change', renderCharacterClassPreview);
+    renderCharacterClassPreview();
     document.getElementById('goLoginBtn').onclick = () => ScreenManager.show('loginScreen');
     document.getElementById('goRegisterBtn').onclick = () => ScreenManager.show('registerScreen');
     document.getElementById('backFromLoginBtn').onclick = () => ScreenManager.show('welcomeScreen');
@@ -919,6 +955,7 @@
         if (name.length < 3) throw new Error('Nom de personnage trop court.');
         if (name.length > 16) throw new Error('Nom de personnage trop long.');
         if (!/^[a-zA-ZÀ-ÿ0-9_-]+$/.test(name)) throw new Error('Nom invalide. Utilise lettres, chiffres, _ ou -.');
+        setMessage('characterMessage', `Création du ${klass} ${name}...`, true);
         let createdCharacter;
         if (supabaseClient) {
           createdCharacter = await accountStore.createCharacter({ name, class: klass });
