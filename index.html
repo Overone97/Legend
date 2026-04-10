@@ -603,7 +603,7 @@
           level: 1,
           xp: 0,
           attributePoints: 0,
-          attributes: { vitalite: 0, force: 0, intelligence: 0, agilite: 0 },
+          attributes: { vitalite: 0, sagesse: 0, force: 0, intelligence: 0, chance: 0, agilite: 0 },
           inventory: {},
           equipment: { arme: null, amulette: null, cape: null },
           hp: 100,
@@ -674,7 +674,7 @@
           level: 1,
           xp: 0,
           attributePoints: 0,
-          attributes: { vitalite: 0, force: 0, intelligence: 0, agilite: 0 },
+          attributes: { vitalite: 0, sagesse: 0, force: 0, intelligence: 0, chance: 0, agilite: 0 },
           inventory: {},
           equipment: { arme: null, amulette: null, cape: null },
           hp: 100,
@@ -1209,8 +1209,10 @@
         </div>
         <div class="badge-row">
           <span class="badge">Vitalité ${attributes.vitalite}</span>
+          <span class="badge">Sagesse ${attributes.sagesse}</span>
           <span class="badge">Force ${attributes.force}</span>
           <span class="badge">Intelligence ${attributes.intelligence}</span>
+          <span class="badge">Chance ${attributes.chance}</span>
           <span class="badge">Agilité ${attributes.agilite}</span>
         </div>
       `;
@@ -1227,8 +1229,10 @@
         <h4>Distribuer les points</h4>
         <div class="badge-row">
           <button class="secondary" data-attr="vitalite" ${(character.attributePoints || 0) > 0 ? '' : 'disabled'}>+ Vitalité</button>
+          <button class="secondary" data-attr="sagesse" ${(character.attributePoints || 0) > 0 ? '' : 'disabled'}>+ Sagesse</button>
           <button class="secondary" data-attr="force" ${(character.attributePoints || 0) > 0 ? '' : 'disabled'}>+ Force</button>
           <button class="secondary" data-attr="intelligence" ${(character.attributePoints || 0) > 0 ? '' : 'disabled'}>+ Intelligence</button>
+          <button class="secondary" data-attr="chance" ${(character.attributePoints || 0) > 0 ? '' : 'disabled'}>+ Chance</button>
           <button class="secondary" data-attr="agilite" ${(character.attributePoints || 0) > 0 ? '' : 'disabled'}>+ Agilité</button>
         </div>
       `;
