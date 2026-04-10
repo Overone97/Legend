@@ -420,6 +420,8 @@
       selectedCharacter: 'legend_selected_character_v1',
     };
 
+    const STARTING_POSITION = { x: 0, y: 0, mapId: 'Bourg-Legend' };
+    const SAFE_ZONE = new Set(['0,0', '0,1', '0,2', '1,0', '1,1', '1,2']);
     const INITIAL_WORLD_ENCOUNTERS = ['2,2', '4,5', '7,3'];
     const WORLD_ENCOUNTERS = new Set(INITIAL_WORLD_ENCOUNTERS);
     const WORLD_TILE_TYPES = {
@@ -500,9 +502,9 @@
           class: payload.class,
           level: 1,
           hp: 100,
-          mapId: 'training-ground',
-          x: 0,
-          y: 0,
+          mapId: STARTING_POSITION.mapId,
+          x: STARTING_POSITION.x,
+          y: STARTING_POSITION.y,
         };
         account.characters.push(character);
         this.updateAccount(account);
@@ -566,7 +568,9 @@
         return (data || []).map(character => ({
           level: 1,
           hp: 100,
-          mapId: 'training-ground',
+          mapId: STARTING_POSITION.mapId,
+          x: STARTING_POSITION.x,
+          y: STARTING_POSITION.y,
           ...character,
         }));
       },
@@ -1056,6 +1060,7 @@
       }
       const key = `${character.x ?? 0},${character.y ?? 0}`;
       const poi = WORLD_POI[key];
+      const isSafeZone = SAFE_ZONE.has(key);
       preview.innerHTML = `
         <h4>${character.name}</h4>
         <div class="badge-row">
@@ -1064,11 +1069,11 @@
           <span class="badge">X ${character.x ?? 0}</span>
           <span class="badge">Y ${character.y ?? 0}</span>
         </div>
-        <div class="hint">Carte prototype avec biomes lisibles. Les cases rouges déclenchent une rencontre.</div>
+        <div class="hint">Carte prototype avec biomes lisibles. Les cases rouges déclenchent une rencontre, sauf en zone sûre.</div>
       `;
       poiPreview.innerHTML = poi
-        ? `<h4>${poi.name}</h4><div class="badge-row"><span class="badge">${poi.type}</span></div><div class="hint">${poi.description}</div>`
-        : '<div class="hint">Aucun point d’intérêt notable sur cette case.</div>';
+        ? `<h4>${poi.name}</h4><div class="badge-row"><span class="badge">${poi.type}</span>${isSafeZone ? '<span class="badge">Zone sûre</span>' : ''}</div><div class="hint">${poi.description}</div>`
+        : `<div class="hint">${isSafeZone ? 'Zone sûre autour de Bourg-Legend.' : 'Aucun point d’intérêt notable sur cette case.'}</div>`;
       renderWorldGrid();
     }
 
@@ -1177,7 +1182,7 @@
       character.mapId = WORLD_POI[targetKey]?.name || character.mapId || 'training-ground';
       const positionKey = `${character.x},${character.y}`;
       document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • position ${character.x}, ${character.y}`;
-      if (WORLD_ENCOUNTERS.has(positionKey)) {
+      if (!SAFE_ZONE.has(positionKey) && WORLD_ENCOUNTERS.has(positionKey)) {
         setMessage('worldMessage', `Embuscade en ${positionKey} ! Passage en combat.`, 'ok');
         renderWorldPreview();
         switchView('combatView');
