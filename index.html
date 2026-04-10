@@ -480,11 +480,11 @@
       '4,5': 'forest', '5,5': 'plains', '6,5': 'road', '7,5': 'road'
     };
     const ENCOUNTER_CONFIG = {
-      '2,2': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, xp: 18, resources: [{ key: 'bois_sombre', name: 'Bois sombre', qty: 2 }], color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, element: 'terre', description: 'Une attaque sale mais encore gérable.' } },
-      '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, resources: [{ key: 'griffe_noire', name: 'Griffe noire', qty: 1 }, { key: 'peau_rapee', name: 'Peau râpée', qty: 2 }], color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, element: 'terre', description: 'Une frappe violente pour les zones dangereuses.' } },
-      '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, resources: [{ key: 'fer_use', name: 'Fer usé', qty: 2 }], color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, element: 'air', description: 'Un projectile rapide qui punit les distances mal gérées.' } },
-      '4,1': { name: 'Ondine des rives', hp: 88, ap: 6, mp: 4, speed: 9, xp: 24, resources: [{ key: 'perle_froide', name: 'Perle froide', qty: 1 }], color: '#0ea5e9', skill: { name: 'Jet d’écume', costAP: 4, range: 3, damage: 20, element: 'eau', description: 'Une attaque d’eau vive qui use à distance.' } },
-      '6,3': { name: 'Cendrelame', hp: 105, ap: 7, mp: 3, speed: 10, xp: 32, resources: [{ key: 'braise_tiede', name: 'Braise tiède', qty: 2 }], color: '#dc2626', skill: { name: 'Lame ardente', costAP: 5, range: 2, damage: 24, element: 'feu', description: 'Une coupe embrasée qui annonce des ennemis plus agressifs.' } },
+      '2,2': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, xp: 18, resistances: { terre: 10 }, resources: [{ key: 'bois_sombre', name: 'Bois sombre', qty: 2 }], color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, element: 'terre', description: 'Une attaque sale mais encore gérable.' } },
+      '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, resistances: { terre: 15, feu: -5 }, resources: [{ key: 'griffe_noire', name: 'Griffe noire', qty: 1 }, { key: 'peau_rapee', name: 'Peau râpée', qty: 2 }], color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, element: 'terre', description: 'Une frappe violente pour les zones dangereuses.' } },
+      '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, resistances: { air: 10 }, resources: [{ key: 'fer_use', name: 'Fer usé', qty: 2 }], color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, element: 'air', description: 'Un projectile rapide qui punit les distances mal gérées.' } },
+      '4,1': { name: 'Ondine des rives', hp: 88, ap: 6, mp: 4, speed: 9, xp: 24, resistances: { eau: 20, feu: -10 }, resources: [{ key: 'perle_froide', name: 'Perle froide', qty: 1 }], color: '#0ea5e9', skill: { name: 'Jet d’écume', costAP: 4, range: 3, damage: 20, element: 'eau', description: 'Une attaque d’eau vive qui use à distance.' } },
+      '6,3': { name: 'Cendrelame', hp: 105, ap: 7, mp: 3, speed: 10, xp: 32, resistances: { feu: 20, eau: -10 }, resources: [{ key: 'braise_tiede', name: 'Braise tiède', qty: 2 }], color: '#dc2626', skill: { name: 'Lame ardente', costAP: 5, range: 2, damage: 24, element: 'feu', description: 'Une coupe embrasée qui annonce des ennemis plus agressifs.' } },
     };
 
     const CRAFT_RECIPES = [
@@ -732,7 +732,7 @@
     }
 
     class Entity {
-      constructor({ id, name, team, x, y, maxHp, ap, mp, speed, color, skill }) {
+      constructor({ id, name, team, x, y, maxHp, ap, mp, speed, color, skill, resistances = {} }) {
         this.id = id;
         this.name = name;
         this.team = team;
@@ -748,6 +748,7 @@
         this.speed = speed;
         this.color = color;
         this.skill = skill;
+        this.resistances = resistances;
         this.alive = true;
       }
       resetTurn() { this.ap = this.baseAP; this.mp = this.baseMP; }
@@ -880,8 +881,8 @@
         const combatBonuses = getCharacterCombatBonuses(this.currentCharacter || {});
         const elementBonusMap = { terre: attributes.force || 0, feu: attributes.intelligence || 0, eau: attributes.chance || 0, air: attributes.agilite || 0 };
         const boostedSkill = new Skill({ ...classFromCharacter.skill, damage: classFromCharacter.skill.damage + (combatBonuses.bonusDamage || 0) + Math.floor((elementBonusMap[classFromCharacter.skill.element] || 0) / 2) });
-        this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, maxHp: classFromCharacter.stats.maxHp + (combatBonuses.maxHp || 0) + ((attributes.vitalite || 0) * 2), ap: classFromCharacter.stats.ap, mp: classFromCharacter.stats.mp + (combatBonuses.mp || 0), speed: classFromCharacter.stats.speed, color: classFromCharacter.stats.color, skill: boostedSkill });
-        this.enemy = new Entity({ id: 'enemy', name: encounterData.name, team: 'enemy', x: 6, y: 1, maxHp: encounterData.hp, ap: encounterData.ap, mp: encounterData.mp, speed: encounterData.speed, color: encounterData.color, skill: new Skill(encounterData.skill) });
+        this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, maxHp: classFromCharacter.stats.maxHp + (combatBonuses.maxHp || 0) + ((attributes.vitalite || 0) * 2), ap: classFromCharacter.stats.ap, mp: classFromCharacter.stats.mp + (combatBonuses.mp || 0), speed: classFromCharacter.stats.speed, color: classFromCharacter.stats.color, skill: boostedSkill, resistances: {} });
+        this.enemy = new Entity({ id: 'enemy', name: encounterData.name, team: 'enemy', x: 6, y: 1, maxHp: encounterData.hp, ap: encounterData.ap, mp: encounterData.mp, speed: encounterData.speed, color: encounterData.color, skill: new Skill(encounterData.skill), resistances: encounterData.resistances || {} });
         this.turnOrder = [this.player, this.enemy].sort((a, b) => b.speed - a.speed);
         this.activeEntityIndex = 0;
         this.gameOver = false;
@@ -936,8 +937,10 @@
 
       castSkill(caster, target) {
         caster.ap -= caster.skill.costAP;
-        target.takeDamage(caster.skill.damage);
-        this.addLog(`${caster.name} utilise ${caster.skill.name} et inflige ${caster.skill.damage} dégâts.`);
+        const resistance = target.resistances?.[caster.skill.element] || 0;
+        const finalDamage = Math.max(0, Math.round(caster.skill.damage * (1 - resistance / 100)));
+        target.takeDamage(finalDamage);
+        this.addLog(`${caster.name} utilise ${caster.skill.name} (${caster.skill.element}) et inflige ${finalDamage} dégâts${resistance ? `, résistance ${resistance}%` : ''}.`);
         if (!target.alive) this.finishGame(caster.team === 'player');
         this.render();
       }
