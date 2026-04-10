@@ -713,11 +713,12 @@
     }
 
     class Skill {
-      constructor({ name, costAP, range, damage, minRange = 1, description = '' }) {
+      constructor({ name, costAP, range, damage, element = 'neutre', minRange = 1, description = '' }) {
         this.name = name;
         this.costAP = costAP;
         this.range = range;
         this.damage = damage;
+        this.element = element;
         this.minRange = minRange;
         this.description = description;
       }
@@ -824,9 +825,9 @@
         this.lastReward = null;
         this.currentEncounter = null;
         this.classes = {
-          warrior: { name: 'Guerrier', flavor: 'Solide, brutal, parfait pour les mêlées courtes.', stats: { maxHp: 120, ap: 6, mp: 3, speed: 8, color: '#f97316' }, skill: new Skill({ name: 'Frappe lourde', costAP: 4, range: 1, damage: 30, description: 'Attaque de mêlée puissante.' }) },
-          mage: { name: 'Mage', flavor: 'Fragile mais très dangereux à distance.', stats: { maxHp: 85, ap: 8, mp: 4, speed: 10, color: '#8b5cf6' }, skill: new Skill({ name: 'Orbe arcanique', costAP: 5, range: 4, damage: 26, description: 'Projectile magique à moyenne portée.' }) },
-          archer: { name: 'Archer', flavor: 'Mobile, précis, excellent pour kite.', stats: { maxHp: 100, ap: 6, mp: 5, speed: 12, color: '#22c55e' }, skill: new Skill({ name: 'Flèche perçante', costAP: 4, range: 5, damage: 22, description: 'Tir longue portée très flexible.' }) },
+          warrior: { name: 'Guerrier', flavor: 'Solide, brutal, parfait pour les mêlées courtes.', stats: { maxHp: 120, ap: 6, mp: 3, speed: 8, color: '#f97316' }, skill: new Skill({ name: 'Frappe lourde', costAP: 4, range: 1, damage: 30, element: 'terre', description: 'Attaque de mêlée puissante.' }) },
+          mage: { name: 'Mage', flavor: 'Fragile mais très dangereux à distance.', stats: { maxHp: 85, ap: 8, mp: 4, speed: 10, color: '#8b5cf6' }, skill: new Skill({ name: 'Orbe arcanique', costAP: 5, range: 4, damage: 26, element: 'feu', description: 'Projectile magique à moyenne portée.' }) },
+          archer: { name: 'Archer', flavor: 'Mobile, précis, excellent pour kite.', stats: { maxHp: 100, ap: 6, mp: 5, speed: 12, color: '#22c55e' }, skill: new Skill({ name: 'Flèche perçante', costAP: 4, range: 5, damage: 22, element: 'air', description: 'Tir longue portée très flexible.' }) },
         };
         this.bindCombatUI();
         this.renderClassChoices();
@@ -1003,7 +1004,7 @@
         document.getElementById('statusText').textContent = this.currentCharacter ? `Connecté avec ${this.currentCharacter.name}` : '8x8 • 1v1 • Canvas';
         document.getElementById('playerHud').innerHTML = this.player ? this.renderEntityHud(this.player, true) : '<p class="hint">Choisis un personnage puis lance le combat.</p>';
         document.getElementById('enemyHud').innerHTML = this.enemy ? this.renderEntityHud(this.enemy, false) : '<p class="hint">L’ennemi apparaîtra au lancement.</p>';
-        document.getElementById('skillInfo').innerHTML = this.player ? `<strong>${this.player.skill.name}</strong><div class="badge-row"><span class="badge">AP ${this.player.skill.costAP}</span><span class="badge">Portée ${this.player.skill.minRange}-${this.player.skill.range}</span><span class="badge">Dégâts ${this.player.skill.damage}</span></div><p class="hint">${this.player.skill.description}</p>` : '<p class="hint">La compétence de ta classe apparaîtra ici.</p>';
+        document.getElementById('skillInfo').innerHTML = this.player ? `<strong>${this.player.skill.name}</strong><div class="badge-row"><span class="badge">AP ${this.player.skill.costAP}</span><span class="badge">Portée ${this.player.skill.minRange}-${this.player.skill.range}</span><span class="badge">Dégâts ${this.player.skill.damage}</span><span class="badge">Élément ${this.player.skill.element}</span></div><p class="hint">${this.player.skill.description}</p>` : '<p class="hint">La compétence de ta classe apparaîtra ici.</p>';
       }
       renderEntityHud(entity, isPlayer) {
         const hpPercent = Math.max(0, (entity.hp / entity.maxHp) * 100);
