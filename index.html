@@ -480,13 +480,13 @@
       forestier: {
         name: 'Panoplie forestière',
         bonuses: {
-          2: '+10 PV et +5 dégâts',
+          2: { label: '+10 PV et +5 dégâts', stats: { maxHp: 10, bonusDamage: 5 } },
         },
       },
       roadrunner: {
         name: 'Panoplie du rôdeur',
         bonuses: {
-          1: '+1 mobilité narrative',
+          1: { label: '+1 PM', stats: { mp: 1 } },
         },
       },
     };
@@ -762,6 +762,28 @@
       }
     }
 
+    function getCharacterCombatBonuses(character) {
+      const equipment = character?.equipment || { arme: null, amulette: null, cape: null };
+      const equippedRecipes = CRAFT_RECIPES.filter(recipe => Object.values(equipment).includes(recipe.reward.name));
+      const setCounts = equippedRecipes.reduce((acc, recipe) => {
+        if (!recipe.reward.set) return acc;
+        acc[recipe.reward.set] = (acc[recipe.reward.set] || 0) + 1;
+        return acc;
+      }, {});
+      return Object.entries(setCounts).reduce((stats, [setKey, count]) => {
+        const setData = SET_BONUSES[setKey];
+        if (!setData) return stats;
+        Object.entries(setData.bonuses).forEach(([pieces, bonus]) => {
+          if (count >= Number(pieces)) {
+            Object.entries(bonus.stats || {}).forEach(([statKey, value]) => {
+              stats[statKey] = (stats[statKey] || 0) + value;
+            });
+          }
+        });
+        return stats;
+      }, {});
+    }
+
     class Game {
       constructor() {
         this.canvas = document.getElementById('gameCanvas');
@@ -827,7 +849,9 @@
         const classFromCharacter = this.currentCharacter && this.classes[this.currentCharacter.class] ? this.classes[this.currentCharacter.class] : selected;
         const encounterData = encounter || { name: 'Bandit', hp: 95, ap: 6, mp: 3, speed: 9, xp: 25, color: '#ef4444', skill: { name: 'Coup cruel', costAP: 4, range: 1, damage: 24, description: 'Attaque de mêlée hostile.' } };
         this.currentEncounter = encounterData;
-        this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, ...classFromCharacter.stats, skill: classFromCharacter.skill });
+        const combatBonuses = getCharacterCombatBonuses(this.currentCharacter || {});
+        const boostedSkill = new Skill({ ...classFromCharacter.skill, damage: classFromCharacter.skill.damage + (combatBonuses.bonusDamage || 0) });
+        this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, maxHp: classFromCharacter.stats.maxHp + (combatBonuses.maxHp || 0), ap: classFromCharacter.stats.ap, mp: classFromCharacter.stats.mp + (combatBonuses.mp || 0), speed: classFromCharacter.stats.speed, color: classFromCharacter.stats.color, skill: boostedSkill });
         this.enemy = new Entity({ id: 'enemy', name: encounterData.name, team: 'enemy', x: 6, y: 1, maxHp: encounterData.hp, ap: encounterData.ap, mp: encounterData.mp, speed: encounterData.speed, color: encounterData.color, skill: new Skill(encounterData.skill) });
         this.turnOrder = [this.player, this.enemy].sort((a, b) => b.speed - a.speed);
         this.activeEntityIndex = 0;
@@ -1234,7 +1258,7 @@
         if (!setData) return [];
         return Object.entries(setData.bonuses)
           .filter(([pieces]) => count >= Number(pieces))
-          .map(([, bonus]) => `${setData.name}: ${bonus}`);
+          .map(([, bonus]) => `${setData.name}: ${bonus.label}`);
       });
       document.getElementById('equipmentPreview').innerHTML = `
         <h4>Équipement</h4>
