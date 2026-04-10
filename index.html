@@ -533,6 +533,7 @@
           name: payload.name,
           class: payload.class,
           level: 1,
+          xp: 0,
           hp: 100,
           mapId: STARTING_POSITION.mapId,
           x: STARTING_POSITION.x,
@@ -599,6 +600,7 @@
         if (error) throw error;
         return (data || []).map(character => ({
           level: 1,
+          xp: 0,
           hp: 100,
           mapId: STARTING_POSITION.mapId,
           x: STARTING_POSITION.x,
@@ -721,6 +723,7 @@
         this.hoverCell = null;
         this.gameOver = false;
         this.lastBattleResult = null;
+        this.lastReward = null;
         this.classes = {
           warrior: { name: 'Guerrier', flavor: 'Solide, brutal, parfait pour les mêlées courtes.', stats: { maxHp: 120, ap: 6, mp: 3, speed: 8, color: '#f97316' }, skill: new Skill({ name: 'Frappe lourde', costAP: 4, range: 1, damage: 30, description: 'Attaque de mêlée puissante.' }) },
           mage: { name: 'Mage', flavor: 'Fragile mais très dangereux à distance.', stats: { maxHp: 85, ap: 8, mp: 4, speed: 10, color: '#8b5cf6' }, skill: new Skill({ name: 'Orbe arcanique', costAP: 5, range: 4, damage: 26, description: 'Projectile magique à moyenne portée.' }) },
@@ -771,6 +774,7 @@
         this.activeEntityIndex = 0;
         this.gameOver = false;
         this.lastBattleResult = null;
+        this.lastReward = null;
         this.log = [];
         document.getElementById('returnToWorldBtn').style.display = 'none';
         this.beginTurn();
@@ -857,6 +861,16 @@
         this.gameOver = true;
         this.phase = 'ended';
         this.lastBattleResult = playerWon ? 'victory' : 'defeat';
+        if (playerWon && this.currentCharacter) {
+          const gainedXp = 25;
+          const nextXp = (this.currentCharacter.xp || 0) + gainedXp;
+          const levelUp = nextXp >= (this.currentCharacter.level || 1) * 100;
+          this.currentCharacter.xp = levelUp ? nextXp - ((this.currentCharacter.level || 1) * 100) : nextXp;
+          if (levelUp) this.currentCharacter.level = (this.currentCharacter.level || 1) + 1;
+          this.lastReward = { xp: gainedXp, levelUp };
+        } else {
+          this.lastReward = null;
+        }
         this.addLog(playerWon ? 'Victoire ! Le bandit est tombé.' : 'Défaite... le héros a été vaincu.');
         this.updateHUD();
         this.render();
@@ -1013,7 +1027,7 @@
         ? characters.map(char => `
             <div class="char-card" data-char-id="${char.id}">
               <strong>${char.name}</strong><br>
-              <small>${char.class.toUpperCase()} • niveau ${char.level} • ${char.mapId}</small>
+              <small>${char.class.toUpperCase()} • niveau ${char.level} • XP ${char.xp || 0} • ${char.mapId}</small>
             </div>
           `).join('')
         : '<div class="hint">Aucun personnage. Crée le premier à droite pour peupler ce compte.</div>';
@@ -1246,7 +1260,10 @@
       document.getElementById('returnToWorldBtn').style.display = 'none';
       if (result === 'victory' && character) {
         WORLD_ENCOUNTERS.delete(`${character.x ?? 0},${character.y ?? 0}`);
-        setMessage('worldMessage', 'Victoire. La zone est sécurisée pour le moment.', 'ok');
+        const rewardText = game.lastReward
+          ? `Victoire. +${game.lastReward.xp} XP${game.lastReward.levelUp ? ' et niveau gagné' : ''}.`
+          : 'Victoire. La zone est sécurisée pour le moment.';
+        setMessage('worldMessage', rewardText, 'ok');
       } else if (result === 'defeat') {
         setMessage('worldMessage', 'Défaite. Retour prudent sur la carte.', 'error');
       }
