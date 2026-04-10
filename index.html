@@ -201,6 +201,7 @@
       .landing, .characters-wrap, .app { grid-template-columns: 1fr; }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <section class="screen active" id="welcomeScreen">
@@ -339,12 +340,52 @@
   </section>
 
   <script>
+    const SUPABASE_URL = window.LEGEND_SUPABASE_URL || '';
+    const SUPABASE_ANON_KEY = window.LEGEND_SUPABASE_ANON_KEY || '';
+    const supabaseClient = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
+
     const STORAGE_KEYS = {
       accounts: 'legend_accounts_v1',
       session: 'legend_session_v1',
     };
 
     const accountStore = {
+      async signUpRemote(accountName, password) {
+        if (!supabaseClient) return null;
+        const email = `${accountName.toLowerCase()}@legend.local`;
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) throw error;
+        const user = data.user;
+        if (!user) return null;
+        const { error: profileError } = await supabaseClient.from('profiles').upsert({ id: user.id, account_name: accountName });
+        if (profileError) throw profileError;
+        return user;
+      },
+      async signInRemote(accountName, password) {
+        if (!supabaseClient) return null;
+        const email = `${accountName.toLowerCase()}@legend.local`;
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        return data.user;
+      },
+      async getRemoteCharacters() {
+        if (!supabaseClient) return null;
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return [];
+        const { data, error } = await supabaseClient.from('characters').select('*').eq('user_id', user.id).order('created_at');
+        if (error) throw error;
+        return data || [];
+      },
+      async createRemoteCharacter(payload) {
+        if (!supabaseClient) return null;
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) throw new Error('Utilisateur non connecté.');
+        const { data, error } = await supabaseClient.from('characters').insert({ user_id: user.id, name: payload.name, class: payload.class }).select().single();
+        if (error) throw error;
+        return data;
+      },
       getAll() {
         return JSON.parse(localStorage.getItem(STORAGE_KEYS.accounts) || '[]');
       },
@@ -696,16 +737,27 @@
       el.className = ok ? 'message ok' : 'message';
     }
 
-    function renderCharacters() {
+    async function renderCharacters() {
       const account = accountStore.current();
       const list = document.getElementById('characterList');
       if (!account) {
         list.innerHTML = '<div class="hint">Aucun compte connecté.</div>';
         return;
       }
+
+      let characters = account.characters || [];
+      if (supabaseClient) {
+        try {
+          const remoteChars = await accountStore.getRemoteCharacters();
+          if (Array.isArray(remoteChars)) characters = remoteChars;
+        } catch (err) {
+          console.error('Remote character load failed:', err);
+        }
+      }
+
       document.getElementById('accountNameDisplay').textContent = `Compte : ${account.accountName}`;
-      list.innerHTML = account.characters.length
-        ? account.characters.map((char, index) => `
+      list.innerHTML = characters.length
+        ? characters.map((char, index) => `
             <div class="char-card ${index === 0 ? 'active' : ''}" data-char-id="${char.id}">
               <strong>${char.name}</strong><br>
               <small>${char.class.toUpperCase()} • niveau ${char.level} • ${char.mapId}</small>
@@ -717,7 +769,7 @@
       let selectedId = cards[0]?.dataset.charId || null;
       const applySelection = () => {
         cards.forEach(card => card.classList.toggle('active', card.dataset.charId === selectedId));
-        const selected = account.characters.find(c => c.id === selectedId) || null;
+        const selected = characters.find(c => c.id === selectedId) || null;
         game.setCharacter(selected);
         document.getElementById('shellStatus').textContent = selected ? `Personnage actif : ${selected.name} (${selected.class})` : 'Aucun personnage sélectionné';
       };
@@ -725,7 +777,7 @@
       applySelection();
 
       document.getElementById('playCharacterBtn').onclick = () => {
-        const selected = account.characters.find(c => c.id === selectedId);
+        const selected = characters.find(c => c.id === selectedId);
         if (!selected) return setMessage('characterMessage', 'Sélectionne un personnage.');
         game.setCharacter(selected);
         document.getElementById('shellStatus').textContent = `Personnage actif : ${selected.name} (${selected.class})`;
@@ -746,12 +798,15 @@
     document.getElementById('backFromLoginBtn').onclick = () => ScreenManager.show('welcomeScreen');
     document.getElementById('backFromRegisterBtn').onclick = () => ScreenManager.show('welcomeScreen');
 
-    document.getElementById('registerBtn').onclick = () => {
+    document.getElementById('registerBtn').onclick = async () => {
       try {
         const name = document.getElementById('registerName').value.trim();
         const password = document.getElementById('registerPassword').value.trim();
         if (name.length < 3) throw new Error('Nom de compte trop court.');
         if (password.length < 4) throw new Error('Mot de passe trop court.');
+        if (supabaseClient) {
+          await accountStore.signUpRemote(name, password);
+        }
         accountStore.register(name, password);
         setMessage('registerMessage', 'Compte créé. Tu peux te connecter.', true);
       } catch (err) {
@@ -759,35 +814,43 @@
       }
     };
 
-    document.getElementById('loginBtn').onclick = () => {
+    document.getElementById('loginBtn').onclick = async () => {
       try {
         const name = document.getElementById('loginName').value.trim();
         const password = document.getElementById('loginPassword').value.trim();
+        if (supabaseClient) {
+          await accountStore.signInRemote(name, password);
+        }
         accountStore.login(name, password);
         ScreenManager.showShell();
-        renderCharacters();
+        await renderCharacters();
         game.updateHUD();
       } catch (err) {
         setMessage('loginMessage', err.message);
       }
     };
 
-    document.getElementById('createCharacterBtn').onclick = () => {
+    document.getElementById('createCharacterBtn').onclick = async () => {
       try {
         const account = accountStore.current();
         if (!account) throw new Error('Aucun compte connecté.');
         const name = document.getElementById('characterNameInput').value.trim();
         const klass = document.getElementById('characterClassSelect').value;
         if (name.length < 3) throw new Error('Nom de personnage trop court.');
-        accountStore.createCharacter(account.id, { name, class: klass });
+        if (supabaseClient) {
+          await accountStore.createRemoteCharacter({ name, class: klass });
+        } else {
+          accountStore.createCharacter(account.id, { name, class: klass });
+        }
         setMessage('characterMessage', 'Personnage créé.', true);
-        renderCharacters();
+        await renderCharacters();
       } catch (err) {
         setMessage('characterMessage', err.message);
       }
     };
 
-    document.getElementById('logoutBtn').onclick = () => {
+    document.getElementById('logoutBtn').onclick = async () => {
+      if (supabaseClient) await supabaseClient.auth.signOut();
       accountStore.logout();
       ScreenManager.show('welcomeScreen');
     };
