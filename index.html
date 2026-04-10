@@ -869,9 +869,11 @@
         const classFromCharacter = this.currentCharacter && this.classes[this.currentCharacter.class] ? this.classes[this.currentCharacter.class] : selected;
         const encounterData = encounter || { name: 'Bandit', hp: 95, ap: 6, mp: 3, speed: 9, xp: 25, color: '#ef4444', skill: { name: 'Coup cruel', costAP: 4, range: 1, damage: 24, description: 'Attaque de mêlée hostile.' } };
         this.currentEncounter = encounterData;
+        const attributes = this.currentCharacter?.attributes || { vitalite: 0, sagesse: 0, force: 0, intelligence: 0, chance: 0, agilite: 0 };
         const combatBonuses = getCharacterCombatBonuses(this.currentCharacter || {});
-        const boostedSkill = new Skill({ ...classFromCharacter.skill, damage: classFromCharacter.skill.damage + (combatBonuses.bonusDamage || 0) });
-        this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, maxHp: classFromCharacter.stats.maxHp + (combatBonuses.maxHp || 0), ap: classFromCharacter.stats.ap, mp: classFromCharacter.stats.mp + (combatBonuses.mp || 0), speed: classFromCharacter.stats.speed, color: classFromCharacter.stats.color, skill: boostedSkill });
+        const elementBonusMap = { terre: attributes.force || 0, feu: attributes.intelligence || 0, eau: attributes.chance || 0, air: attributes.agilite || 0 };
+        const boostedSkill = new Skill({ ...classFromCharacter.skill, damage: classFromCharacter.skill.damage + (combatBonuses.bonusDamage || 0) + Math.floor((elementBonusMap[classFromCharacter.skill.element] || 0) / 2) });
+        this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, maxHp: classFromCharacter.stats.maxHp + (combatBonuses.maxHp || 0) + ((attributes.vitalite || 0) * 2), ap: classFromCharacter.stats.ap, mp: classFromCharacter.stats.mp + (combatBonuses.mp || 0), speed: classFromCharacter.stats.speed, color: classFromCharacter.stats.color, skill: boostedSkill });
         this.enemy = new Entity({ id: 'enemy', name: encounterData.name, team: 'enemy', x: 6, y: 1, maxHp: encounterData.hp, ap: encounterData.ap, mp: encounterData.mp, speed: encounterData.speed, color: encounterData.color, skill: new Skill(encounterData.skill) });
         this.turnOrder = [this.player, this.enemy].sort((a, b) => b.speed - a.speed);
         this.activeEntityIndex = 0;
@@ -965,7 +967,8 @@
         this.phase = 'ended';
         this.lastBattleResult = playerWon ? 'victory' : 'defeat';
         if (playerWon && this.currentCharacter) {
-          const gainedXp = this.currentEncounter?.xp || 25;
+          const sagesse = this.currentCharacter.attributes?.sagesse || 0;
+          const gainedXp = (this.currentEncounter?.xp || 25) + Math.floor(sagesse / 2);
           const nextXp = (this.currentCharacter.xp || 0) + gainedXp;
           const levelUp = nextXp >= (this.currentCharacter.level || 1) * 100;
           this.currentCharacter.xp = levelUp ? nextXp - ((this.currentCharacter.level || 1) * 100) : nextXp;
