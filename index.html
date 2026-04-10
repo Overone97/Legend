@@ -308,6 +308,7 @@
 
     <div class="tabs">
       <button class="tab active" data-view="charactersView">Personnages</button>
+      <button class="tab ghost" data-view="statsView">Stats</button>
       <button class="tab ghost" data-view="inventoryView">Inventaire</button>
       <button class="tab ghost" data-view="craftView">Craft</button>
       <button class="tab ghost" data-view="worldView">Carte</button>
@@ -338,6 +339,19 @@
           <div class="message" id="characterMessage"></div>
           <button id="createCharacterBtn">Créer ce personnage</button>
           <button id="playCharacterBtn" class="secondary">Jouer avec ce personnage</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="statsView">
+      <div class="characters-wrap">
+        <div class="panel create-card">
+          <h3>Fiche du personnage</h3>
+          <div class="class-preview" id="statsPreview"></div>
+        </div>
+        <div class="panel create-card">
+          <h3>Bonifications actives</h3>
+          <div class="class-preview" id="statsBonuses"></div>
         </div>
       </div>
     </div>
@@ -587,6 +601,7 @@
           class: payload.class,
           level: 1,
           xp: 0,
+          attributes: { vitalite: 0, force: 0, intelligence: 0, agilite: 0 },
           inventory: {},
           equipment: { arme: null, amulette: null, cape: null },
           hp: 100,
@@ -656,6 +671,7 @@
         return (data || []).map(character => ({
           level: 1,
           xp: 0,
+          attributes: { vitalite: 0, force: 0, intelligence: 0, agilite: 0 },
           inventory: {},
           equipment: { arme: null, amulette: null, cape: null },
           hp: 100,
@@ -1135,6 +1151,7 @@
           : 'Aucun personnage sélectionné';
         document.getElementById('playCharacterBtn').disabled = !selected;
         renderWorldPreview();
+        renderStats();
         renderInventory();
         renderCraft();
       };
@@ -1152,6 +1169,42 @@
         switchView('combatView');
         game.updateHUD();
       };
+    }
+
+    function renderStats() {
+      const preview = document.getElementById('statsPreview');
+      const bonuses = document.getElementById('statsBonuses');
+      const character = game.currentCharacter;
+      if (!character) {
+        preview.innerHTML = '<div class="hint">Sélectionne un personnage pour voir ses stats.</div>';
+        bonuses.innerHTML = '<div class="hint">Aucun bonus actif.</div>';
+        return;
+      }
+      const attributes = character.attributes || { vitalite: 0, force: 0, intelligence: 0, agilite: 0 };
+      const combatBonuses = getCharacterCombatBonuses(character);
+      preview.innerHTML = `
+        <h4>${character.name}</h4>
+        <div class="badge-row">
+          <span class="badge">Classe ${character.class}</span>
+          <span class="badge">Niveau ${character.level || 1}</span>
+          <span class="badge">XP ${character.xp || 0}</span>
+        </div>
+        <div class="badge-row">
+          <span class="badge">Vitalité ${attributes.vitalite}</span>
+          <span class="badge">Force ${attributes.force}</span>
+          <span class="badge">Intelligence ${attributes.intelligence}</span>
+          <span class="badge">Agilité ${attributes.agilite}</span>
+        </div>
+      `;
+      bonuses.innerHTML = `
+        <h4>Bonus actifs</h4>
+        <div class="badge-row">
+          <span class="badge">PV bonus ${combatBonuses.maxHp || 0}</span>
+          <span class="badge">Dégâts bonus ${combatBonuses.bonusDamage || 0}</span>
+          <span class="badge">PM bonus ${combatBonuses.mp || 0}</span>
+        </div>
+        <div class="hint">Les prochaines PR permettront d’investir des points et de brancher les caractéristiques au combat.</div>
+      `;
     }
 
     function renderCraft() {
@@ -1348,6 +1401,7 @@
       document.getElementById(id).classList.add('active');
       document.querySelectorAll('.tab[data-view]').forEach(tab => tab.classList.toggle('active', tab.dataset.view === id));
       if (id === 'worldView') renderWorldPreview();
+      if (id === 'statsView') renderStats();
       if (id === 'inventoryView') renderInventory();
       if (id === 'craftView') renderCraft();
     }
