@@ -309,6 +309,7 @@
     <div class="tabs">
       <button class="tab active" data-view="charactersView">Personnages</button>
       <button class="tab ghost" data-view="inventoryView">Inventaire</button>
+      <button class="tab ghost" data-view="craftView">Craft</button>
       <button class="tab ghost" data-view="worldView">Carte</button>
       <button class="tab ghost" data-view="combatView">Combat prototype</button>
       <button id="returnToWorldBtn" class="tab ghost" style="display:none;">Retour carte</button>
@@ -351,6 +352,21 @@
         <div class="panel create-card">
           <h3>Résumé</h3>
           <div class="class-preview" id="inventoryPreview"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="craftView">
+      <div class="characters-wrap">
+        <div class="panel create-card">
+          <h3>Atelier de craft</h3>
+          <p class="hint">Fabrique tes premiers équipements à partir des ressources lootées.</p>
+          <div class="character-list" id="craftRecipeList"></div>
+        </div>
+        <div class="panel create-card">
+          <h3>Résultat</h3>
+          <div class="message" id="craftMessage"></div>
+          <div class="class-preview" id="craftPreview"></div>
         </div>
       </div>
     </div>
@@ -452,6 +468,12 @@
       '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, resources: [{ key: 'griffe_noire', name: 'Griffe noire', qty: 1 }, { key: 'peau_rapee', name: 'Peau râpée', qty: 2 }], color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, description: 'Une frappe violente pour les zones dangereuses.' } },
       '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, resources: [{ key: 'fer_use', name: 'Fer usé', qty: 2 }], color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, description: 'Un projectile rapide qui punit les distances mal gérées.' } },
     };
+
+    const CRAFT_RECIPES = [
+      { key: 'amulette_bois', name: 'Amulette en bois sombre', costs: [{ key: 'bois_sombre', qty: 2 }], reward: { key: 'amulette_bois', name: 'Amulette en bois sombre', qty: 1, slot: 'amulette' } },
+      { key: 'dagues_usees', name: 'Dagues usées', costs: [{ key: 'fer_use', qty: 2 }], reward: { key: 'dagues_usees', name: 'Dagues usées', qty: 1, slot: 'arme' } },
+      { key: 'cape_rapee', name: 'Cape râpée', costs: [{ key: 'peau_rapee', qty: 2 }, { key: 'griffe_noire', qty: 1 }], reward: { key: 'cape_rapee', name: 'Cape râpée', qty: 1, slot: 'cape' } },
+    ];
 
     const WORLD_POI = {
       '0,0': {
@@ -1072,6 +1094,7 @@
         document.getElementById('playCharacterBtn').disabled = !selected;
         renderWorldPreview();
         renderInventory();
+        renderCraft();
       };
       cards.forEach(card => card.addEventListener('click', () => {
         selectedId = card.dataset.charId;
@@ -1087,6 +1110,53 @@
         switchView('combatView');
         game.updateHUD();
       };
+    }
+
+    function renderCraft() {
+      const list = document.getElementById('craftRecipeList');
+      const preview = document.getElementById('craftPreview');
+      const character = game.currentCharacter;
+      if (!character) {
+        list.innerHTML = '<div class="hint">Sélectionne un personnage pour crafter.</div>';
+        preview.innerHTML = '<div class="hint">Aucun personnage actif.</div>';
+        return;
+      }
+      const inventory = character.inventory || {};
+      list.innerHTML = CRAFT_RECIPES.map(recipe => {
+        const canCraft = recipe.costs.every(cost => (inventory[cost.key] || 0) >= cost.qty);
+        return `
+          <div class="char-card">
+            <strong>${recipe.name}</strong><br>
+            <small>${recipe.costs.map(cost => `${cost.qty} ${cost.key.replaceAll('_', ' ')}`).join(' • ')}</small><br>
+            <button class="secondary" data-recipe="${recipe.key}" ${canCraft ? '' : 'disabled'}>Fabriquer</button>
+          </div>
+        `;
+      }).join('');
+      preview.innerHTML = '<div class="hint">Fabrique tes premiers objets pour poser les bases des futures panoplies.</div>';
+      list.querySelectorAll('[data-recipe]').forEach(button => {
+        button.addEventListener('click', () => craftRecipe(button.dataset.recipe));
+      });
+    }
+
+    function craftRecipe(recipeKey) {
+      const character = game.currentCharacter;
+      if (!character) return;
+      const recipe = CRAFT_RECIPES.find(item => item.key === recipeKey);
+      if (!recipe) return;
+      character.inventory = character.inventory || {};
+      const canCraft = recipe.costs.every(cost => (character.inventory[cost.key] || 0) >= cost.qty);
+      if (!canCraft) {
+        setMessage('craftMessage', 'Ressources insuffisantes.', 'error');
+        return;
+      }
+      recipe.costs.forEach(cost => {
+        character.inventory[cost.key] -= cost.qty;
+      });
+      character.inventory[recipe.reward.key] = (character.inventory[recipe.reward.key] || 0) + recipe.reward.qty;
+      setMessage('craftMessage', `${recipe.reward.name} fabriqué.`, 'ok');
+      document.getElementById('craftPreview').innerHTML = `<h4>${recipe.reward.name}</h4><div class="badge-row"><span class="badge">Slot ${recipe.reward.slot}</span></div><div class="hint">Premier objet crafté. La suite logique sera l’équipement et les bonus de panoplie.</div>`;
+      renderCraft();
+      renderInventory();
     }
 
     function renderInventory() {
@@ -1191,6 +1261,7 @@
       document.querySelectorAll('.tab[data-view]').forEach(tab => tab.classList.toggle('active', tab.dataset.view === id));
       if (id === 'worldView') renderWorldPreview();
       if (id === 'inventoryView') renderInventory();
+      if (id === 'craftView') renderCraft();
     }
 
     document.querySelectorAll('.tab[data-view]').forEach(tab => tab.addEventListener('click', () => switchView(tab.dataset.view)));
