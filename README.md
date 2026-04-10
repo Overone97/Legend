@@ -51,3 +51,9 @@ Voir [`docs/ROADMAP.md`](./docs/ROADMAP.md)
 ## Lancer le prototype
 
 Ouvrir simplement `index.html` dans un navigateur moderne.
+
+## Version jouable en ligne
+
+Une fois GitHub Pages activé pour le repo, le prototype sera jouable ici :
+
+`https://overone97.github.io/Legend/`
