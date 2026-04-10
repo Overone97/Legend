@@ -300,6 +300,7 @@
       <button class="tab active" data-view="charactersView">Personnages</button>
       <button class="tab ghost" data-view="worldView">Carte</button>
       <button class="tab ghost" data-view="combatView">Combat prototype</button>
+      <button id="returnToWorldBtn" class="tab ghost" style="display:none;">Retour carte</button>
     </div>
 
     <div class="view active" id="charactersView">
@@ -642,6 +643,7 @@
         this.log = [];
         this.hoverCell = null;
         this.gameOver = false;
+        this.lastBattleResult = null;
         this.classes = {
           warrior: { name: 'Guerrier', flavor: 'Solide, brutal, parfait pour les mêlées courtes.', stats: { maxHp: 120, ap: 6, mp: 3, speed: 8, color: '#f97316' }, skill: new Skill({ name: 'Frappe lourde', costAP: 4, range: 1, damage: 30, description: 'Attaque de mêlée puissante.' }) },
           mage: { name: 'Mage', flavor: 'Fragile mais très dangereux à distance.', stats: { maxHp: 85, ap: 8, mp: 4, speed: 10, color: '#8b5cf6' }, skill: new Skill({ name: 'Orbe arcanique', costAP: 5, range: 4, damage: 26, description: 'Projectile magique à moyenne portée.' }) },
@@ -690,7 +692,9 @@
         this.turnOrder = [this.player, this.enemy].sort((a, b) => b.speed - a.speed);
         this.activeEntityIndex = 0;
         this.gameOver = false;
+        this.lastBattleResult = null;
         this.log = [];
+        document.getElementById('returnToWorldBtn').style.display = 'none';
         this.beginTurn();
       }
 
@@ -771,7 +775,15 @@
 
       advanceTurn() { this.activeEntityIndex = (this.activeEntityIndex + 1) % this.turnOrder.length; const next = this.getActiveEntity(); if (!next?.alive) return this.advanceTurn(); this.beginTurn(); }
       endTurn() { if (!this.gameOver) this.advanceTurn(); }
-      finishGame(playerWon) { this.gameOver = true; this.phase = 'ended'; this.addLog(playerWon ? 'Victoire ! Le bandit est tombé.' : 'Défaite... le héros a été vaincu.'); this.updateHUD(); this.render(); }
+      finishGame(playerWon) {
+        this.gameOver = true;
+        this.phase = 'ended';
+        this.lastBattleResult = playerWon ? 'victory' : 'defeat';
+        this.addLog(playerWon ? 'Victoire ! Le bandit est tombé.' : 'Défaite... le héros a été vaincu.');
+        this.updateHUD();
+        this.render();
+        document.getElementById('returnToWorldBtn').style.display = 'inline-flex';
+      }
       getActiveEntity() { return this.turnOrder[this.activeEntityIndex]; }
       isCellFree(x, y) { if (!this.grid.isInside(x, y)) return false; if (this.player && this.player.alive && this.player.x === x && this.player.y === y) return false; if (this.enemy && this.enemy.alive && this.enemy.x === x && this.enemy.y === y) return false; return true; }
       eventToCell(event) {
@@ -1013,11 +1025,11 @@
     function switchView(id) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById(id).classList.add('active');
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === id));
+      document.querySelectorAll('.tab[data-view]').forEach(tab => tab.classList.toggle('active', tab.dataset.view === id));
       if (id === 'worldView') renderWorldPreview();
     }
 
-    document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => switchView(tab.dataset.view)));
+    document.querySelectorAll('.tab[data-view]').forEach(tab => tab.addEventListener('click', () => switchView(tab.dataset.view)));
     document.getElementById('characterClassSelect').addEventListener('change', renderCharacterClassPreview);
     renderCharacterClassPreview();
     document.getElementById('goLoginBtn').onclick = () => ScreenManager.show('loginScreen');
@@ -1126,6 +1138,17 @@
       renderWorldPreview();
     }
 
+    document.getElementById('returnToWorldBtn').onclick = () => {
+      const result = game.lastBattleResult;
+      document.getElementById('returnToWorldBtn').style.display = 'none';
+      if (result === 'victory') {
+        setMessage('worldMessage', 'Victoire. La zone est sécurisée pour le moment.', 'ok');
+      } else if (result === 'defeat') {
+        setMessage('worldMessage', 'Défaite. Retour prudent sur la carte.', 'error');
+      }
+      switchView('worldView');
+    };
+
     document.getElementById('logoutBtn').onclick = async () => {
       const currentAccount = await accountStore.current().catch(() => null);
       if (supabaseClient) {
@@ -1138,6 +1161,7 @@
       setMessage('registerMessage', '');
       setMessage('characterMessage', '');
       setMessage('worldMessage', '');
+      document.getElementById('returnToWorldBtn').style.display = 'none';
       setButtonLoading('loginBtn', false, 'Connexion...');
       setButtonLoading('registerBtn', false, 'Création...');
       setButtonLoading('createCharacterBtn', false, 'Création...');
