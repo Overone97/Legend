@@ -433,9 +433,9 @@
       '4,5': 'forest', '5,5': 'plains', '6,5': 'road', '7,5': 'road'
     };
     const ENCOUNTER_CONFIG = {
-      '2,2': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, description: 'Une attaque sale mais encore gérable.' } },
-      '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, description: 'Une frappe violente pour les zones dangereuses.' } },
-      '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, description: 'Un projectile rapide qui punit les distances mal gérées.' } },
+      '2,2': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, xp: 18, color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, description: 'Une attaque sale mais encore gérable.' } },
+      '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, description: 'Une frappe violente pour les zones dangereuses.' } },
+      '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, description: 'Un projectile rapide qui punit les distances mal gérées.' } },
     };
 
     const WORLD_POI = {
@@ -724,6 +724,7 @@
         this.gameOver = false;
         this.lastBattleResult = null;
         this.lastReward = null;
+        this.currentEncounter = null;
         this.classes = {
           warrior: { name: 'Guerrier', flavor: 'Solide, brutal, parfait pour les mêlées courtes.', stats: { maxHp: 120, ap: 6, mp: 3, speed: 8, color: '#f97316' }, skill: new Skill({ name: 'Frappe lourde', costAP: 4, range: 1, damage: 30, description: 'Attaque de mêlée puissante.' }) },
           mage: { name: 'Mage', flavor: 'Fragile mais très dangereux à distance.', stats: { maxHp: 85, ap: 8, mp: 4, speed: 10, color: '#8b5cf6' }, skill: new Skill({ name: 'Orbe arcanique', costAP: 5, range: 4, damage: 26, description: 'Projectile magique à moyenne portée.' }) },
@@ -767,7 +768,8 @@
         const selected = this.classes[this.selectedClass];
         const playerName = this.currentCharacter?.name || selected.name;
         const classFromCharacter = this.currentCharacter && this.classes[this.currentCharacter.class] ? this.classes[this.currentCharacter.class] : selected;
-        const encounterData = encounter || { name: 'Bandit', hp: 95, ap: 6, mp: 3, speed: 9, color: '#ef4444', skill: { name: 'Coup cruel', costAP: 4, range: 1, damage: 24, description: 'Attaque de mêlée hostile.' } };
+        const encounterData = encounter || { name: 'Bandit', hp: 95, ap: 6, mp: 3, speed: 9, xp: 25, color: '#ef4444', skill: { name: 'Coup cruel', costAP: 4, range: 1, damage: 24, description: 'Attaque de mêlée hostile.' } };
+        this.currentEncounter = encounterData;
         this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, ...classFromCharacter.stats, skill: classFromCharacter.skill });
         this.enemy = new Entity({ id: 'enemy', name: encounterData.name, team: 'enemy', x: 6, y: 1, maxHp: encounterData.hp, ap: encounterData.ap, mp: encounterData.mp, speed: encounterData.speed, color: encounterData.color, skill: new Skill(encounterData.skill) });
         this.turnOrder = [this.player, this.enemy].sort((a, b) => b.speed - a.speed);
@@ -862,7 +864,7 @@
         this.phase = 'ended';
         this.lastBattleResult = playerWon ? 'victory' : 'defeat';
         if (playerWon && this.currentCharacter) {
-          const gainedXp = 25;
+          const gainedXp = this.currentEncounter?.xp || 25;
           const nextXp = (this.currentCharacter.xp || 0) + gainedXp;
           const levelUp = nextXp >= (this.currentCharacter.level || 1) * 100;
           this.currentCharacter.xp = levelUp ? nextXp - ((this.currentCharacter.level || 1) * 100) : nextXp;
