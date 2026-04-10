@@ -265,10 +265,12 @@
       <div class="characters-wrap">
         <div class="panel">
           <h3>Mes personnages</h3>
+          <p class="hint">Choisis ton héros actif ou forge-en un nouveau.</p>
           <div class="character-list" id="characterList"></div>
         </div>
         <div class="panel create-card">
           <h3>Créer un personnage</h3>
+          <p class="hint">Une classe, un nom, et tu entres dans Legend.</p>
           <div class="field"><label>Nom</label><input id="characterNameInput" maxlength="16" /></div>
           <div class="field">
             <label>Classe</label>
@@ -704,7 +706,7 @@
         ? account.characters.map((char, index) => `
             <div class="char-card ${index === 0 ? 'active' : ''}" data-char-id="${char.id}">
               <strong>${char.name}</strong><br>
-              <small>${char.class} • niveau ${char.level}</small>
+              <small>${char.class.toUpperCase()} • niveau ${char.level} • ${char.mapId}</small>
             </div>
           `).join('')
         : '<div class="hint">Aucun personnage. Crée le premier à droite.</div>';
