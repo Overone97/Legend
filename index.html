@@ -351,6 +351,7 @@
         <div class="panel create-card">
           <h3>Position actuelle</h3>
           <div class="class-preview" id="worldPreview"></div>
+          <div class="class-preview" id="poiPreview"></div>
         </div>
       </div>
     </div>
@@ -427,6 +428,28 @@
       '0,2': 'safe', '1,2': 'road', '2,2': 'forest', '3,2': 'plains', '4,2': 'water',
       '5,3': 'forest', '6,3': 'plains', '7,3': 'forest', '8,3': 'road',
       '4,5': 'forest', '5,5': 'plains', '6,5': 'road', '7,5': 'road'
+    };
+    const WORLD_POI = {
+      '0,0': {
+        name: 'Bourg-Legend',
+        type: 'Ville de départ',
+        description: 'Le premier refuge du joueur. Ici, on souffle, on se prépare, et on repart vers la route.',
+      },
+      '1,1': {
+        name: 'Route des recrues',
+        type: 'Route',
+        description: 'Le chemin le plus sûr pour quitter la ville sans se faire ouvrir trop vite.',
+      },
+      '2,2': {
+        name: 'Bosquet trouble',
+        type: 'Zone dangereuse',
+        description: 'Un coin boisé où les embuscades sont fréquentes. Clairement pas un endroit pour flâner.',
+      },
+      '4,1': {
+        name: 'Rive bleue',
+        type: 'Point naturel',
+        description: 'Un bord d’eau calme, utile pour donner du relief au monde et casser la monotonie.',
+      }
     };
 
     const localAccountStore = {
@@ -1023,12 +1046,16 @@
 
     function renderWorldPreview() {
       const preview = document.getElementById('worldPreview');
+      const poiPreview = document.getElementById('poiPreview');
       const character = game.currentCharacter;
       if (!character) {
         preview.innerHTML = '<div class="hint">Sélectionne un personnage pour explorer la carte.</div>';
+        poiPreview.innerHTML = '<div class="hint">Les points d’intérêt du monde apparaîtront ici.</div>';
         renderWorldGrid();
         return;
       }
+      const key = `${character.x ?? 0},${character.y ?? 0}`;
+      const poi = WORLD_POI[key];
       preview.innerHTML = `
         <h4>${character.name}</h4>
         <div class="badge-row">
@@ -1039,6 +1066,9 @@
         </div>
         <div class="hint">Carte prototype avec biomes lisibles. Les cases rouges déclenchent une rencontre.</div>
       `;
+      poiPreview.innerHTML = poi
+        ? `<h4>${poi.name}</h4><div class="badge-row"><span class="badge">${poi.type}</span></div><div class="hint">${poi.description}</div>`
+        : '<div class="hint">Aucun point d’intérêt notable sur cette case.</div>';
       renderWorldGrid();
     }
 
@@ -1137,13 +1167,14 @@
       const currentX = character.x ?? 0;
       const currentY = character.y ?? 0;
       const distance = Math.abs(targetX - currentX) + Math.abs(targetY - currentY);
+      const targetKey = `${targetX},${targetY}`;
       if (distance !== 1) {
         setMessage('worldMessage', 'Tu peux seulement aller sur une case voisine.', 'error');
         return;
       }
       character.x = targetX;
       character.y = targetY;
-      character.mapId = character.mapId || 'training-ground';
+      character.mapId = WORLD_POI[targetKey]?.name || character.mapId || 'training-ground';
       const positionKey = `${character.x},${character.y}`;
       document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • position ${character.x}, ${character.y}`;
       if (WORLD_ENCOUNTERS.has(positionKey)) {
