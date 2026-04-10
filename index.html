@@ -217,7 +217,7 @@
       </div>
       <div class="panel auth-card">
         <h2>Entrer dans le jeu</h2>
-        <p class="hint">Pour l’instant, le menu compte/personnages est fonctionnel avec une base locale simulée. La vraie base distante viendra juste après.</p>
+        <p class="hint">Connecte-toi avec Supabase si la config est fournie. Sinon, le mode local reste dispo pour prototyper sans backend.</p>
         <button id="goLoginBtn">Connexion</button>
         <button id="goRegisterBtn" class="secondary">Créer un compte</button>
       </div>
@@ -351,41 +351,7 @@
       session: 'legend_session_v1',
     };
 
-    const accountStore = {
-      async signUpRemote(accountName, password) {
-        if (!supabaseClient) return null;
-        const email = `${accountName.toLowerCase()}@legend.local`;
-        const { data, error } = await supabaseClient.auth.signUp({ email, password });
-        if (error) throw error;
-        const user = data.user;
-        if (!user) return null;
-        const { error: profileError } = await supabaseClient.from('profiles').upsert({ id: user.id, account_name: accountName });
-        if (profileError) throw profileError;
-        return user;
-      },
-      async signInRemote(accountName, password) {
-        if (!supabaseClient) return null;
-        const email = `${accountName.toLowerCase()}@legend.local`;
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        return data.user;
-      },
-      async getRemoteCharacters() {
-        if (!supabaseClient) return null;
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) return [];
-        const { data, error } = await supabaseClient.from('characters').select('*').eq('user_id', user.id).order('created_at');
-        if (error) throw error;
-        return data || [];
-      },
-      async createRemoteCharacter(payload) {
-        if (!supabaseClient) return null;
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) throw new Error('Utilisateur non connecté.');
-        const { data, error } = await supabaseClient.from('characters').insert({ user_id: user.id, name: payload.name, class: payload.class }).select().single();
-        if (error) throw error;
-        return data;
-      },
+    const localAccountStore = {
       getAll() {
         return JSON.parse(localStorage.getItem(STORAGE_KEYS.accounts) || '[]');
       },
@@ -400,6 +366,7 @@
         const account = { id: crypto.randomUUID(), accountName, password, characters: [] };
         accounts.push(account);
         this.saveAll(accounts);
+        localStorage.setItem(STORAGE_KEYS.session, account.id);
         return account;
       },
       login(accountName, password) {
@@ -441,6 +408,76 @@
         return character;
       },
     };
+
+    const remoteAccountStore = {
+      emailFor(accountName) {
+        return `${accountName.trim().toLowerCase()}@legend.local`;
+      },
+      async signUp(accountName, password) {
+        const email = this.emailFor(accountName);
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) throw error;
+        const user = data.user;
+        if (!user) throw new Error('Compte créé, mais utilisateur Supabase introuvable.');
+        const { error: profileError } = await supabaseClient.from('profiles').upsert({ id: user.id, account_name: accountName });
+        if (profileError) throw profileError;
+        return { id: user.id, accountName };
+      },
+      async signIn(accountName, password) {
+        const email = this.emailFor(accountName);
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        const user = data.user;
+        if (!user) throw new Error('Session Supabase introuvable.');
+        const { data: profile, error: profileError } = await supabaseClient
+          .from('profiles')
+          .select('account_name')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (profileError) throw profileError;
+        return { id: user.id, accountName: profile?.account_name || accountName };
+      },
+      async signOut() {
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) throw error;
+      },
+      async current() {
+        const { data: { user }, error } = await supabaseClient.auth.getUser();
+        if (error) throw error;
+        if (!user) return null;
+        const { data: profile, error: profileError } = await supabaseClient
+          .from('profiles')
+          .select('account_name')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (profileError) throw profileError;
+        return { id: user.id, accountName: profile?.account_name || user.email?.split('@')[0] || 'Joueur' };
+      },
+      async getCharacters() {
+        const currentAccount = await this.current();
+        if (!currentAccount) return [];
+        const { data, error } = await supabaseClient
+          .from('characters')
+          .select('*')
+          .eq('user_id', currentAccount.id)
+          .order('created_at');
+        if (error) throw error;
+        return data || [];
+      },
+      async createCharacter(payload) {
+        const currentAccount = await this.current();
+        if (!currentAccount) throw new Error('Utilisateur non connecté.');
+        const { data, error } = await supabaseClient
+          .from('characters')
+          .insert({ user_id: currentAccount.id, name: payload.name, class: payload.class })
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      },
+    };
+
+    const accountStore = supabaseClient ? remoteAccountStore : localAccountStore;
 
     class ScreenManager {
       static show(id) {
@@ -738,20 +775,23 @@
     }
 
     async function renderCharacters() {
-      const account = accountStore.current();
+      const account = await accountStore.current();
       const list = document.getElementById('characterList');
       if (!account) {
         list.innerHTML = '<div class="hint">Aucun compte connecté.</div>';
+        document.getElementById('accountNameDisplay').textContent = 'Compte';
+        game.setCharacter(null);
         return;
       }
 
       let characters = account.characters || [];
       if (supabaseClient) {
         try {
-          const remoteChars = await accountStore.getRemoteCharacters();
-          if (Array.isArray(remoteChars)) characters = remoteChars;
+          characters = await accountStore.getCharacters();
         } catch (err) {
           console.error('Remote character load failed:', err);
+          setMessage('characterMessage', 'Impossible de charger les personnages Supabase.');
+          characters = [];
         }
       }
 
@@ -803,12 +843,16 @@
         const name = document.getElementById('registerName').value.trim();
         const password = document.getElementById('registerPassword').value.trim();
         if (name.length < 3) throw new Error('Nom de compte trop court.');
-        if (password.length < 4) throw new Error('Mot de passe trop court.');
+        if (password.length < 6) throw new Error('Mot de passe trop court. 6 caractères minimum.');
         if (supabaseClient) {
-          await accountStore.signUpRemote(name, password);
+          await accountStore.signUp(name, password);
+          setMessage('registerMessage', 'Compte Supabase créé. Connecte-toi maintenant.', true);
+          return;
         }
         accountStore.register(name, password);
-        setMessage('registerMessage', 'Compte créé. Tu peux te connecter.', true);
+        ScreenManager.showShell();
+        await renderCharacters();
+        game.updateHUD();
       } catch (err) {
         setMessage('registerMessage', err.message);
       }
@@ -818,10 +862,11 @@
       try {
         const name = document.getElementById('loginName').value.trim();
         const password = document.getElementById('loginPassword').value.trim();
-        if (supabaseClient) {
-          await accountStore.signInRemote(name, password);
+        if (!name || !password) throw new Error('Renseigne ton nom de compte et ton mot de passe.');
+        await accountStore.signIn?.(name, password);
+        if (!supabaseClient) {
+          accountStore.login(name, password);
         }
-        accountStore.login(name, password);
         ScreenManager.showShell();
         await renderCharacters();
         game.updateHUD();
@@ -832,16 +877,17 @@
 
     document.getElementById('createCharacterBtn').onclick = async () => {
       try {
-        const account = accountStore.current();
+        const account = await accountStore.current();
         if (!account) throw new Error('Aucun compte connecté.');
         const name = document.getElementById('characterNameInput').value.trim();
         const klass = document.getElementById('characterClassSelect').value;
         if (name.length < 3) throw new Error('Nom de personnage trop court.');
         if (supabaseClient) {
-          await accountStore.createRemoteCharacter({ name, class: klass });
+          await accountStore.createCharacter({ name, class: klass });
         } else {
           accountStore.createCharacter(account.id, { name, class: klass });
         }
+        document.getElementById('characterNameInput').value = '';
         setMessage('characterMessage', 'Personnage créé.', true);
         await renderCharacters();
       } catch (err) {
@@ -850,18 +896,33 @@
     };
 
     document.getElementById('logoutBtn').onclick = async () => {
-      if (supabaseClient) await supabaseClient.auth.signOut();
-      accountStore.logout();
+      if (supabaseClient) {
+        await accountStore.signOut();
+      } else {
+        accountStore.logout();
+      }
+      setMessage('loginMessage', '');
+      setMessage('registerMessage', '');
+      setMessage('characterMessage', '');
       ScreenManager.show('welcomeScreen');
     };
 
-    if (accountStore.current()) {
-      ScreenManager.showShell();
-      renderCharacters();
-      game.updateHUD();
-    } else {
+    async function boot() {
+      try {
+        const currentAccount = await accountStore.current();
+        if (currentAccount) {
+          ScreenManager.showShell();
+          await renderCharacters();
+          game.updateHUD();
+          return;
+        }
+      } catch (err) {
+        console.error('Boot failed:', err);
+      }
       ScreenManager.show('welcomeScreen');
     }
+
+    boot();
   </script>
 </body>
 </html>
