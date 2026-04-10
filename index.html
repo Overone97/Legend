@@ -199,6 +199,11 @@
       color: var(--text);
       font-weight: 700;
       cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      text-align: center;
+      padding: 4px;
     }
     .world-tile.active {
       border-color: rgba(94,234,212,0.9);
@@ -212,6 +217,11 @@
       background: #4c1d1d;
       border-color: rgba(248,113,113,0.4);
     }
+    .world-tile.plains { background: #365314; }
+    .world-tile.forest { background: #14532d; }
+    .world-tile.road { background: #57534e; }
+    .world-tile.water { background: #1d4ed8; }
+    .world-tile.safe { background: #0f766e; }
     .section h3 { font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; margin: 0; }
     .class-card {
       border: 1px solid rgba(255,255,255,0.08);
@@ -411,6 +421,13 @@
 
     const INITIAL_WORLD_ENCOUNTERS = ['2,2', '4,5', '7,3'];
     const WORLD_ENCOUNTERS = new Set(INITIAL_WORLD_ENCOUNTERS);
+    const WORLD_TILE_TYPES = {
+      '0,0': 'safe', '1,0': 'road', '2,0': 'road', '3,0': 'plains', '4,0': 'plains',
+      '0,1': 'safe', '1,1': 'road', '2,1': 'forest', '3,1': 'plains', '4,1': 'water',
+      '0,2': 'safe', '1,2': 'road', '2,2': 'forest', '3,2': 'plains', '4,2': 'water',
+      '5,3': 'forest', '6,3': 'plains', '7,3': 'forest', '8,3': 'road',
+      '4,5': 'forest', '5,5': 'plains', '6,5': 'road', '7,5': 'road'
+    };
 
     const localAccountStore = {
       getAll() {
@@ -986,12 +1003,14 @@
       grid.innerHTML = Array.from({ length: 100 }, (_, index) => {
         const tx = index % 10;
         const ty = Math.floor(index / 10);
-        const classes = ['world-tile'];
-        const encounterKey = `${tx},${ty}`;
-        if (WORLD_ENCOUNTERS.has(encounterKey)) classes.push('encounter');
+        const key = `${tx},${ty}`;
+        const tileType = WORLD_TILE_TYPES[key] || 'plains';
+        const classes = ['world-tile', tileType];
+        if (WORLD_ENCOUNTERS.has(key)) classes.push('encounter');
         if (tx === x && ty === y) classes.push('active');
         else if (isAdjacent(tx, ty)) classes.push('adjacent');
-        return `<button class="${classes.join(' ')}" data-x="${tx}" data-y="${ty}">${tx},${ty}</button>`;
+        const label = tileType === 'safe' ? 'Ville' : tileType === 'road' ? 'Route' : tileType === 'forest' ? 'Forêt' : tileType === 'water' ? 'Eau' : 'Plaine';
+        return `<button class="${classes.join(' ')}" data-x="${tx}" data-y="${ty}">${label}<br>${tx},${ty}</button>`;
       }).join('');
       grid.querySelectorAll('.world-tile').forEach(tile => {
         tile.addEventListener('click', () => {
@@ -1018,7 +1037,7 @@
           <span class="badge">X ${character.x ?? 0}</span>
           <span class="badge">Y ${character.y ?? 0}</span>
         </div>
-        <div class="hint">Prototype de carte cliquable, dans l'esprit d'une exploration tactique lisible. Les cases rouges déclenchent une rencontre.</div>
+        <div class="hint">Carte prototype avec biomes lisibles. Les cases rouges déclenchent une rencontre.</div>
       `;
       renderWorldGrid();
     }
