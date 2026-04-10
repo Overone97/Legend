@@ -516,6 +516,7 @@
           this.selectedClass = character.class;
           this.renderClassChoices();
         }
+        this.updateHUD();
       }
 
       bindCombatUI() {
@@ -541,7 +542,8 @@
       startBattle() {
         const selected = this.classes[this.selectedClass];
         const playerName = this.currentCharacter?.name || selected.name;
-        this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, ...selected.stats, skill: selected.skill });
+        const classFromCharacter = this.currentCharacter && this.classes[this.currentCharacter.class] ? this.classes[this.currentCharacter.class] : selected;
+        this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, ...classFromCharacter.stats, skill: classFromCharacter.skill });
         this.enemy = new Entity({ id: 'enemy', name: 'Bandit', team: 'enemy', x: 6, y: 1, maxHp: 95, ap: 6, mp: 3, speed: 9, color: '#ef4444', skill: new Skill({ name: 'Coup cruel', costAP: 4, range: 1, damage: 24, description: 'Attaque de mêlée hostile.' }) });
         this.turnOrder = [this.player, this.enemy].sort((a, b) => b.speed - a.speed);
         this.activeEntityIndex = 0;
@@ -726,6 +728,7 @@
         const selected = account.characters.find(c => c.id === selectedId);
         if (!selected) return setMessage('characterMessage', 'Sélectionne un personnage.');
         game.setCharacter(selected);
+        document.getElementById('shellStatus').textContent = `Personnage actif : ${selected.name} (${selected.class})`;
         switchView('combatView');
         game.updateHUD();
       };
