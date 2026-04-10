@@ -352,6 +352,7 @@
         <div class="panel create-card">
           <h3>Résumé</h3>
           <div class="class-preview" id="inventoryPreview"></div>
+          <div class="class-preview" id="equipmentPreview"></div>
         </div>
       </div>
     </div>
@@ -572,6 +573,7 @@
           level: 1,
           xp: 0,
           inventory: {},
+          equipment: { arme: null, amulette: null, cape: null },
           hp: 100,
           mapId: STARTING_POSITION.mapId,
           x: STARTING_POSITION.x,
@@ -640,6 +642,7 @@
           level: 1,
           xp: 0,
           inventory: {},
+          equipment: { arme: null, amulette: null, cape: null },
           hp: 100,
           mapId: STARTING_POSITION.mapId,
           x: STARTING_POSITION.x,
@@ -1124,17 +1127,23 @@
       const inventory = character.inventory || {};
       list.innerHTML = CRAFT_RECIPES.map(recipe => {
         const canCraft = recipe.costs.every(cost => (inventory[cost.key] || 0) >= cost.qty);
+        const owned = inventory[recipe.reward.key] || 0;
         return `
           <div class="char-card">
             <strong>${recipe.name}</strong><br>
             <small>${recipe.costs.map(cost => `${cost.qty} ${cost.key.replaceAll('_', ' ')}`).join(' • ')}</small><br>
+            <small>Possédé: ${owned}</small><br>
             <button class="secondary" data-recipe="${recipe.key}" ${canCraft ? '' : 'disabled'}>Fabriquer</button>
+            <button class="ghost" data-equip="${recipe.key}" ${owned > 0 ? '' : 'disabled'}>Équiper</button>
           </div>
         `;
       }).join('');
       preview.innerHTML = '<div class="hint">Fabrique tes premiers objets pour poser les bases des futures panoplies.</div>';
       list.querySelectorAll('[data-recipe]').forEach(button => {
         button.addEventListener('click', () => craftRecipe(button.dataset.recipe));
+      });
+      list.querySelectorAll('[data-equip]').forEach(button => {
+        button.addEventListener('click', () => equipRecipeReward(button.dataset.equip));
       });
     }
 
@@ -1155,6 +1164,23 @@
       character.inventory[recipe.reward.key] = (character.inventory[recipe.reward.key] || 0) + recipe.reward.qty;
       setMessage('craftMessage', `${recipe.reward.name} fabriqué.`, 'ok');
       document.getElementById('craftPreview').innerHTML = `<h4>${recipe.reward.name}</h4><div class="badge-row"><span class="badge">Slot ${recipe.reward.slot}</span></div><div class="hint">Premier objet crafté. La suite logique sera l’équipement et les bonus de panoplie.</div>`;
+      renderCraft();
+      renderInventory();
+    }
+
+    function equipRecipeReward(recipeKey) {
+      const character = game.currentCharacter;
+      if (!character) return;
+      const recipe = CRAFT_RECIPES.find(item => item.key === recipeKey);
+      if (!recipe) return;
+      character.inventory = character.inventory || {};
+      character.equipment = character.equipment || { arme: null, amulette: null, cape: null };
+      if ((character.inventory[recipe.reward.key] || 0) <= 0) {
+        setMessage('craftMessage', 'Objet non disponible dans l’inventaire.', 'error');
+        return;
+      }
+      character.equipment[recipe.reward.slot] = recipe.reward.name;
+      setMessage('craftMessage', `${recipe.reward.name} équipé sur ${recipe.reward.slot}.`, 'ok');
       renderCraft();
       renderInventory();
     }
@@ -1180,6 +1206,15 @@
           <span class="badge">Objets ${entries.length}</span>
         </div>
         <div class="hint">Base d’inventaire prête pour le craft et les équipements.</div>
+      `;
+      const equipment = character.equipment || { arme: null, amulette: null, cape: null };
+      document.getElementById('equipmentPreview').innerHTML = `
+        <h4>Équipement</h4>
+        <div class="badge-row">
+          <span class="badge">Arme: ${equipment.arme || 'vide'}</span>
+          <span class="badge">Amulette: ${equipment.amulette || 'vide'}</span>
+          <span class="badge">Cape: ${equipment.cape || 'vide'}</span>
+        </div>
       `;
     }
 
