@@ -352,6 +352,7 @@
         <div class="panel create-card">
           <h3>Bonifications actives</h3>
           <div class="class-preview" id="statsBonuses"></div>
+          <div class="class-preview" id="attributeAllocator"></div>
         </div>
       </div>
     </div>
@@ -601,6 +602,7 @@
           class: payload.class,
           level: 1,
           xp: 0,
+          attributePoints: 0,
           attributes: { vitalite: 0, force: 0, intelligence: 0, agilite: 0 },
           inventory: {},
           equipment: { arme: null, amulette: null, cape: null },
@@ -671,6 +673,7 @@
         return (data || []).map(character => ({
           level: 1,
           xp: 0,
+          attributePoints: 0,
           attributes: { vitalite: 0, force: 0, intelligence: 0, agilite: 0 },
           inventory: {},
           equipment: { arme: null, amulette: null, cape: null },
@@ -965,7 +968,10 @@
           const nextXp = (this.currentCharacter.xp || 0) + gainedXp;
           const levelUp = nextXp >= (this.currentCharacter.level || 1) * 100;
           this.currentCharacter.xp = levelUp ? nextXp - ((this.currentCharacter.level || 1) * 100) : nextXp;
-          if (levelUp) this.currentCharacter.level = (this.currentCharacter.level || 1) + 1;
+          if (levelUp) {
+            this.currentCharacter.level = (this.currentCharacter.level || 1) + 1;
+            this.currentCharacter.attributePoints = (this.currentCharacter.attributePoints || 0) + 5;
+          }
           const resources = this.currentEncounter?.resources || [];
           this.currentCharacter.inventory = this.currentCharacter.inventory || {};
           resources.forEach(resource => {
@@ -1171,13 +1177,24 @@
       };
     }
 
+    function allocateAttribute(attributeKey) {
+      const character = game.currentCharacter;
+      if (!character || (character.attributePoints || 0) <= 0) return;
+      character.attributes = character.attributes || { vitalite: 0, force: 0, intelligence: 0, agilite: 0 };
+      character.attributes[attributeKey] = (character.attributes[attributeKey] || 0) + 1;
+      character.attributePoints -= 1;
+      renderStats();
+    }
+
     function renderStats() {
       const preview = document.getElementById('statsPreview');
       const bonuses = document.getElementById('statsBonuses');
+      const allocator = document.getElementById('attributeAllocator');
       const character = game.currentCharacter;
       if (!character) {
         preview.innerHTML = '<div class="hint">Sélectionne un personnage pour voir ses stats.</div>';
         bonuses.innerHTML = '<div class="hint">Aucun bonus actif.</div>';
+        allocator.innerHTML = '<div class="hint">Aucun point à distribuer.</div>';
         return;
       }
       const attributes = character.attributes || { vitalite: 0, force: 0, intelligence: 0, agilite: 0 };
@@ -1188,6 +1205,7 @@
           <span class="badge">Classe ${character.class}</span>
           <span class="badge">Niveau ${character.level || 1}</span>
           <span class="badge">XP ${character.xp || 0}</span>
+          <span class="badge">Points ${character.attributePoints || 0}</span>
         </div>
         <div class="badge-row">
           <span class="badge">Vitalité ${attributes.vitalite}</span>
@@ -1203,8 +1221,20 @@
           <span class="badge">Dégâts bonus ${combatBonuses.bonusDamage || 0}</span>
           <span class="badge">PM bonus ${combatBonuses.mp || 0}</span>
         </div>
-        <div class="hint">Les prochaines PR permettront d’investir des points et de brancher les caractéristiques au combat.</div>
+        <div class="hint">Les caractéristiques seront branchées au combat juste après.</div>
       `;
+      allocator.innerHTML = `
+        <h4>Distribuer les points</h4>
+        <div class="badge-row">
+          <button class="secondary" data-attr="vitalite" ${(character.attributePoints || 0) > 0 ? '' : 'disabled'}>+ Vitalité</button>
+          <button class="secondary" data-attr="force" ${(character.attributePoints || 0) > 0 ? '' : 'disabled'}>+ Force</button>
+          <button class="secondary" data-attr="intelligence" ${(character.attributePoints || 0) > 0 ? '' : 'disabled'}>+ Intelligence</button>
+          <button class="secondary" data-attr="agilite" ${(character.attributePoints || 0) > 0 ? '' : 'disabled'}>+ Agilité</button>
+        </div>
+      `;
+      allocator.querySelectorAll('[data-attr]').forEach(button => {
+        button.addEventListener('click', () => allocateAttribute(button.dataset.attr));
+      });
     }
 
     function renderCraft() {
