@@ -432,6 +432,12 @@
       '5,3': 'forest', '6,3': 'plains', '7,3': 'forest', '8,3': 'road',
       '4,5': 'forest', '5,5': 'plains', '6,5': 'road', '7,5': 'road'
     };
+    const ENCOUNTER_CONFIG = {
+      '2,2': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, description: 'Une attaque sale mais encore gérable.' } },
+      '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, description: 'Une frappe violente pour les zones dangereuses.' } },
+      '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, description: 'Un projectile rapide qui punit les distances mal gérées.' } },
+    };
+
     const WORLD_POI = {
       '0,0': {
         name: 'Bourg-Legend',
@@ -754,12 +760,13 @@
         }
       }
 
-      startBattle() {
+      startBattle(encounter = null) {
         const selected = this.classes[this.selectedClass];
         const playerName = this.currentCharacter?.name || selected.name;
         const classFromCharacter = this.currentCharacter && this.classes[this.currentCharacter.class] ? this.classes[this.currentCharacter.class] : selected;
+        const encounterData = encounter || { name: 'Bandit', hp: 95, ap: 6, mp: 3, speed: 9, color: '#ef4444', skill: { name: 'Coup cruel', costAP: 4, range: 1, damage: 24, description: 'Attaque de mêlée hostile.' } };
         this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, ...classFromCharacter.stats, skill: classFromCharacter.skill });
-        this.enemy = new Entity({ id: 'enemy', name: 'Bandit', team: 'enemy', x: 6, y: 1, maxHp: 95, ap: 6, mp: 3, speed: 9, color: '#ef4444', skill: new Skill({ name: 'Coup cruel', costAP: 4, range: 1, damage: 24, description: 'Attaque de mêlée hostile.' }) });
+        this.enemy = new Entity({ id: 'enemy', name: encounterData.name, team: 'enemy', x: 6, y: 1, maxHp: encounterData.hp, ap: encounterData.ap, mp: encounterData.mp, speed: encounterData.speed, color: encounterData.color, skill: new Skill(encounterData.skill) });
         this.turnOrder = [this.player, this.enemy].sort((a, b) => b.speed - a.speed);
         this.activeEntityIndex = 0;
         this.gameOver = false;
@@ -1221,11 +1228,12 @@
       const positionKey = `${character.x},${character.y}`;
       document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • position ${character.x}, ${character.y}`;
       if (!SAFE_ZONE.has(positionKey) && WORLD_ENCOUNTERS.has(positionKey)) {
-        setMessage('worldMessage', `Embuscade en ${positionKey} ! Passage en combat.`, 'ok');
+        const encounter = ENCOUNTER_CONFIG[positionKey];
+        setMessage('worldMessage', `Rencontre : ${encounter?.name || 'ennemi inconnu'} en ${positionKey} !`, 'ok');
         renderWorldPreview();
         switchView('combatView');
         game.setCharacter(character);
-        game.startBattle();
+        game.startBattle(encounter);
         return;
       }
       setMessage('worldMessage', `${character.name} se déplace en ${character.x}, ${character.y}.`, 'ok');
