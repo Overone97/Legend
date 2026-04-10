@@ -186,6 +186,28 @@
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 18px 40px rgba(0,0,0,0.24);
     }
     .class-grid, .hud-grid, .section, .bar-group, .log { display: grid; gap: 10px; }
+    .world-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 8px;
+    }
+    .world-tile {
+      aspect-ratio: 1;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: #1c2240;
+      color: var(--text);
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .world-tile.active {
+      border-color: rgba(94,234,212,0.9);
+      box-shadow: 0 0 0 1px rgba(94,234,212,0.35) inset;
+      background: #134e4a;
+    }
+    .world-tile.adjacent {
+      background: #1e3a5f;
+    }
     .section h3 { font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; margin: 0; }
     .class-card {
       border: 1px solid rgba(255,255,255,0.08);
@@ -307,12 +329,9 @@
       <div class="characters-wrap">
         <div class="panel create-card">
           <h3>Zone d'exploration</h3>
-          <p class="hint">Déplace ton personnage actif sur la carte avant d'entrer en combat.</p>
+          <p class="hint">Clique une case voisine pour déplacer ton personnage actif sur la carte.</p>
           <div class="message" id="worldMessage"></div>
-          <button id="moveUpBtn" class="secondary">Aller au nord</button>
-          <button id="moveLeftBtn" class="secondary">Aller à l'ouest</button>
-          <button id="moveRightBtn" class="secondary">Aller à l'est</button>
-          <button id="moveDownBtn" class="secondary">Aller au sud</button>
+          <div class="world-grid" id="worldGrid"></div>
         </div>
         <div class="panel create-card">
           <h3>Position actuelle</h3>
@@ -935,11 +954,39 @@
       };
     }
 
+    function renderWorldGrid() {
+      const grid = document.getElementById('worldGrid');
+      const character = game.currentCharacter;
+      if (!character) {
+        grid.innerHTML = '<div class="hint">Choisis un personnage pour afficher la carte.</div>';
+        return;
+      }
+      const x = character.x ?? 0;
+      const y = character.y ?? 0;
+      const isAdjacent = (tx, ty) => Math.abs(tx - x) + Math.abs(ty - y) === 1;
+      grid.innerHTML = Array.from({ length: 100 }, (_, index) => {
+        const tx = index % 10;
+        const ty = Math.floor(index / 10);
+        const classes = ['world-tile'];
+        if (tx === x && ty === y) classes.push('active');
+        else if (isAdjacent(tx, ty)) classes.push('adjacent');
+        return `<button class="${classes.join(' ')}" data-x="${tx}" data-y="${ty}">${tx},${ty}</button>`;
+      }).join('');
+      grid.querySelectorAll('.world-tile').forEach(tile => {
+        tile.addEventListener('click', () => {
+          const tx = Number(tile.dataset.x);
+          const ty = Number(tile.dataset.y);
+          moveCurrentCharacterTo(tx, ty);
+        });
+      });
+    }
+
     function renderWorldPreview() {
       const preview = document.getElementById('worldPreview');
       const character = game.currentCharacter;
       if (!character) {
         preview.innerHTML = '<div class="hint">Sélectionne un personnage pour explorer la carte.</div>';
+        renderWorldGrid();
         return;
       }
       preview.innerHTML = `
@@ -950,8 +997,9 @@
           <span class="badge">X ${character.x ?? 0}</span>
           <span class="badge">Y ${character.y ?? 0}</span>
         </div>
-        <div class="hint">Prototype de déplacement hors combat. La prochaine étape sera une vraie map visuelle.</div>
+        <div class="hint">Prototype de carte cliquable, dans l'esprit d'une exploration tactique lisible.</div>
       `;
+      renderWorldGrid();
     }
 
     function switchView(id) {
@@ -1040,24 +1088,26 @@
       }
     };
 
-    function moveCurrentCharacter(dx, dy) {
+    function moveCurrentCharacterTo(targetX, targetY) {
       const character = game.currentCharacter;
       if (!character) {
         setMessage('worldMessage', 'Sélectionne un personnage avant de te déplacer.', 'error');
         return;
       }
-      character.x = Math.max(0, Math.min(9, (character.x ?? 0) + dx));
-      character.y = Math.max(0, Math.min(9, (character.y ?? 0) + dy));
+      const currentX = character.x ?? 0;
+      const currentY = character.y ?? 0;
+      const distance = Math.abs(targetX - currentX) + Math.abs(targetY - currentY);
+      if (distance !== 1) {
+        setMessage('worldMessage', 'Tu peux seulement aller sur une case voisine.', 'error');
+        return;
+      }
+      character.x = targetX;
+      character.y = targetY;
       character.mapId = character.mapId || 'training-ground';
       document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • position ${character.x}, ${character.y}`;
       setMessage('worldMessage', `${character.name} se déplace en ${character.x}, ${character.y}.`, 'ok');
       renderWorldPreview();
     }
-
-    document.getElementById('moveUpBtn').onclick = () => moveCurrentCharacter(0, -1);
-    document.getElementById('moveLeftBtn').onclick = () => moveCurrentCharacter(-1, 0);
-    document.getElementById('moveRightBtn').onclick = () => moveCurrentCharacter(1, 0);
-    document.getElementById('moveDownBtn').onclick = () => moveCurrentCharacter(0, 1);
 
     document.getElementById('logoutBtn').onclick = async () => {
       const currentAccount = await accountStore.current().catch(() => null);
