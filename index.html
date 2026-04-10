@@ -409,7 +409,8 @@
       selectedCharacter: 'legend_selected_character_v1',
     };
 
-    const WORLD_ENCOUNTERS = new Set(['2,2', '4,5', '7,3']);
+    const INITIAL_WORLD_ENCOUNTERS = ['2,2', '4,5', '7,3'];
+    const WORLD_ENCOUNTERS = new Set(INITIAL_WORLD_ENCOUNTERS);
 
     const localAccountStore = {
       getAll() {
@@ -1140,8 +1141,10 @@
 
     document.getElementById('returnToWorldBtn').onclick = () => {
       const result = game.lastBattleResult;
+      const character = game.currentCharacter;
       document.getElementById('returnToWorldBtn').style.display = 'none';
-      if (result === 'victory') {
+      if (result === 'victory' && character) {
+        WORLD_ENCOUNTERS.delete(`${character.x ?? 0},${character.y ?? 0}`);
         setMessage('worldMessage', 'Victoire. La zone est sécurisée pour le moment.', 'ok');
       } else if (result === 'defeat') {
         setMessage('worldMessage', 'Défaite. Retour prudent sur la carte.', 'error');
@@ -1162,6 +1165,8 @@
       setMessage('characterMessage', '');
       setMessage('worldMessage', '');
       document.getElementById('returnToWorldBtn').style.display = 'none';
+      WORLD_ENCOUNTERS.clear();
+      INITIAL_WORLD_ENCOUNTERS.forEach(position => WORLD_ENCOUNTERS.add(position));
       setButtonLoading('loginBtn', false, 'Connexion...');
       setButtonLoading('registerBtn', false, 'Création...');
       setButtonLoading('createCharacterBtn', false, 'Création...');
