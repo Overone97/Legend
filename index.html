@@ -308,6 +308,7 @@
 
     <div class="tabs">
       <button class="tab active" data-view="charactersView">Personnages</button>
+      <button class="tab ghost" data-view="inventoryView">Inventaire</button>
       <button class="tab ghost" data-view="worldView">Carte</button>
       <button class="tab ghost" data-view="combatView">Combat prototype</button>
       <button id="returnToWorldBtn" class="tab ghost" style="display:none;">Retour carte</button>
@@ -336,6 +337,20 @@
           <div class="message" id="characterMessage"></div>
           <button id="createCharacterBtn">Créer ce personnage</button>
           <button id="playCharacterBtn" class="secondary">Jouer avec ce personnage</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="inventoryView">
+      <div class="characters-wrap">
+        <div class="panel create-card">
+          <h3>Inventaire du personnage</h3>
+          <p class="hint">Ressources récoltées pendant l’exploration et les combats.</p>
+          <div class="character-list" id="inventoryList"></div>
+        </div>
+        <div class="panel create-card">
+          <h3>Résumé</h3>
+          <div class="class-preview" id="inventoryPreview"></div>
         </div>
       </div>
     </div>
@@ -1056,6 +1071,7 @@
           : 'Aucun personnage sélectionné';
         document.getElementById('playCharacterBtn').disabled = !selected;
         renderWorldPreview();
+        renderInventory();
       };
       cards.forEach(card => card.addEventListener('click', () => {
         selectedId = card.dataset.charId;
@@ -1071,6 +1087,30 @@
         switchView('combatView');
         game.updateHUD();
       };
+    }
+
+    function renderInventory() {
+      const list = document.getElementById('inventoryList');
+      const preview = document.getElementById('inventoryPreview');
+      const character = game.currentCharacter;
+      if (!character) {
+        list.innerHTML = '<div class="hint">Sélectionne un personnage pour voir son inventaire.</div>';
+        preview.innerHTML = '<div class="hint">Aucun personnage actif.</div>';
+        return;
+      }
+      const entries = Object.entries(character.inventory || {});
+      list.innerHTML = entries.length
+        ? entries.map(([key, qty]) => `<div class="char-card"><strong>${key.replaceAll('_', ' ')}</strong><br><small>Quantité: ${qty}</small></div>`).join('')
+        : '<div class="hint">Inventaire vide pour le moment.</div>';
+      preview.innerHTML = `
+        <h4>${character.name}</h4>
+        <div class="badge-row">
+          <span class="badge">Niveau ${character.level || 1}</span>
+          <span class="badge">XP ${character.xp || 0}</span>
+          <span class="badge">Objets ${entries.length}</span>
+        </div>
+        <div class="hint">Base d’inventaire prête pour le craft et les équipements.</div>
+      `;
     }
 
     function renderWorldGrid() {
@@ -1150,6 +1190,7 @@
       document.getElementById(id).classList.add('active');
       document.querySelectorAll('.tab[data-view]').forEach(tab => tab.classList.toggle('active', tab.dataset.view === id));
       if (id === 'worldView') renderWorldPreview();
+      if (id === 'inventoryView') renderInventory();
     }
 
     document.querySelectorAll('.tab[data-view]').forEach(tab => tab.addEventListener('click', () => switchView(tab.dataset.view)));
