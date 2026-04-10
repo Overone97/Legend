@@ -881,7 +881,7 @@
         const combatBonuses = getCharacterCombatBonuses(this.currentCharacter || {});
         const elementBonusMap = { terre: attributes.force || 0, feu: attributes.intelligence || 0, eau: attributes.chance || 0, air: attributes.agilite || 0 };
         const boostedSkill = new Skill({ ...classFromCharacter.skill, damage: classFromCharacter.skill.damage + (combatBonuses.bonusDamage || 0) + Math.floor((elementBonusMap[classFromCharacter.skill.element] || 0) / 2) });
-        this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, maxHp: classFromCharacter.stats.maxHp + (combatBonuses.maxHp || 0) + ((attributes.vitalite || 0) * 2), ap: classFromCharacter.stats.ap, mp: classFromCharacter.stats.mp + (combatBonuses.mp || 0), speed: classFromCharacter.stats.speed, color: classFromCharacter.stats.color, skill: boostedSkill, resistances: {} });
+        this.player = new Entity({ id: 'player', name: playerName, team: 'player', x: 1, y: 6, maxHp: classFromCharacter.stats.maxHp + (combatBonuses.maxHp || 0) + ((attributes.vitalite || 0) * 2), ap: classFromCharacter.stats.ap, mp: classFromCharacter.stats.mp + (combatBonuses.mp || 0), speed: classFromCharacter.stats.speed, color: classFromCharacter.stats.color, skill: boostedSkill, resistances: { terre: 0, feu: 0, eau: 0, air: 0 } });
         this.enemy = new Entity({ id: 'enemy', name: encounterData.name, team: 'enemy', x: 6, y: 1, maxHp: encounterData.hp, ap: encounterData.ap, mp: encounterData.mp, speed: encounterData.speed, color: encounterData.color, skill: new Skill(encounterData.skill), resistances: encounterData.resistances || {} });
         this.turnOrder = [this.player, this.enemy].sort((a, b) => b.speed - a.speed);
         this.activeEntityIndex = 0;
@@ -1021,7 +1021,12 @@
       }
       renderEntityHud(entity, isPlayer) {
         const hpPercent = Math.max(0, (entity.hp / entity.maxHp) * 100);
-        return `<div class="badge-row"><span class="badge">${entity.name}</span><span class="badge">SPD ${entity.speed}</span></div><div class="bar-label"><span>HP</span><span>${entity.hp}/${entity.maxHp}</span></div><div class="bar"><div class="fill ${isPlayer ? 'hp' : 'enemy-hp'}" style="width:${hpPercent}%"></div></div><div class="badge-row"><span class="badge">AP ${entity.ap}/${entity.baseAP}</span><span class="badge">MP ${entity.mp}/${entity.baseMP}</span><span class="badge">Case (${entity.x + 1}, ${entity.y + 1})</span></div>`;
+        const resistances = entity.resistances || {};
+        const resistanceBadges = ['terre', 'feu', 'eau', 'air']
+          .filter(element => resistances[element] !== undefined)
+          .map(element => `<span class="badge">${element} ${resistances[element]}%</span>`)
+          .join('');
+        return `<div class="badge-row"><span class="badge">${entity.name}</span><span class="badge">SPD ${entity.speed}</span></div><div class="bar-label"><span>HP</span><span>${entity.hp}/${entity.maxHp}</span></div><div class="bar"><div class="fill ${isPlayer ? 'hp' : 'enemy-hp'}" style="width:${hpPercent}%"></div></div><div class="badge-row"><span class="badge">AP ${entity.ap}/${entity.baseAP}</span><span class="badge">MP ${entity.mp}/${entity.baseMP}</span><span class="badge">Case (${entity.x + 1}, ${entity.y + 1})</span></div><div class="badge-row">${resistanceBadges || '<span class="badge">Résistances neutres</span>'}</div>`;
       }
       render() {
         const ctx = this.ctx; ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
