@@ -272,6 +272,7 @@
 
     <div class="tabs">
       <button class="tab active" data-view="charactersView">Personnages</button>
+      <button class="tab ghost" data-view="worldView">Carte</button>
       <button class="tab ghost" data-view="combatView">Combat prototype</button>
     </div>
 
@@ -298,6 +299,24 @@
           <div class="message" id="characterMessage"></div>
           <button id="createCharacterBtn">Créer ce personnage</button>
           <button id="playCharacterBtn" class="secondary">Jouer avec ce personnage</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view" id="worldView">
+      <div class="characters-wrap">
+        <div class="panel create-card">
+          <h3>Zone d'exploration</h3>
+          <p class="hint">Déplace ton personnage actif sur la carte avant d'entrer en combat.</p>
+          <div class="message" id="worldMessage"></div>
+          <button id="moveUpBtn" class="secondary">Aller au nord</button>
+          <button id="moveLeftBtn" class="secondary">Aller à l'ouest</button>
+          <button id="moveRightBtn" class="secondary">Aller à l'est</button>
+          <button id="moveDownBtn" class="secondary">Aller au sud</button>
+        </div>
+        <div class="panel create-card">
+          <h3>Position actuelle</h3>
+          <div class="class-preview" id="worldPreview"></div>
         </div>
       </div>
     </div>
@@ -898,6 +917,7 @@
           ? `Personnage actif : ${selected.name} (${selected.class})`
           : 'Aucun personnage sélectionné';
         document.getElementById('playCharacterBtn').disabled = !selected;
+        renderWorldPreview();
       };
       cards.forEach(card => card.addEventListener('click', () => {
         selectedId = card.dataset.charId;
@@ -915,10 +935,30 @@
       };
     }
 
+    function renderWorldPreview() {
+      const preview = document.getElementById('worldPreview');
+      const character = game.currentCharacter;
+      if (!character) {
+        preview.innerHTML = '<div class="hint">Sélectionne un personnage pour explorer la carte.</div>';
+        return;
+      }
+      preview.innerHTML = `
+        <h4>${character.name}</h4>
+        <div class="badge-row">
+          <span class="badge">Classe ${character.class}</span>
+          <span class="badge">Zone ${character.mapId || 'training-ground'}</span>
+          <span class="badge">X ${character.x ?? 0}</span>
+          <span class="badge">Y ${character.y ?? 0}</span>
+        </div>
+        <div class="hint">Prototype de déplacement hors combat. La prochaine étape sera une vraie map visuelle.</div>
+      `;
+    }
+
     function switchView(id) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById(id).classList.add('active');
       document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === id));
+      if (id === 'worldView') renderWorldPreview();
     }
 
     document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => switchView(tab.dataset.view)));
@@ -1000,6 +1040,25 @@
       }
     };
 
+    function moveCurrentCharacter(dx, dy) {
+      const character = game.currentCharacter;
+      if (!character) {
+        setMessage('worldMessage', 'Sélectionne un personnage avant de te déplacer.', 'error');
+        return;
+      }
+      character.x = Math.max(0, Math.min(9, (character.x ?? 0) + dx));
+      character.y = Math.max(0, Math.min(9, (character.y ?? 0) + dy));
+      character.mapId = character.mapId || 'training-ground';
+      document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • position ${character.x}, ${character.y}`;
+      setMessage('worldMessage', `${character.name} se déplace en ${character.x}, ${character.y}.`, 'ok');
+      renderWorldPreview();
+    }
+
+    document.getElementById('moveUpBtn').onclick = () => moveCurrentCharacter(0, -1);
+    document.getElementById('moveLeftBtn').onclick = () => moveCurrentCharacter(-1, 0);
+    document.getElementById('moveRightBtn').onclick = () => moveCurrentCharacter(1, 0);
+    document.getElementById('moveDownBtn').onclick = () => moveCurrentCharacter(0, 1);
+
     document.getElementById('logoutBtn').onclick = async () => {
       const currentAccount = await accountStore.current().catch(() => null);
       if (supabaseClient) {
@@ -1011,6 +1070,7 @@
       setMessage('loginMessage', '');
       setMessage('registerMessage', '');
       setMessage('characterMessage', '');
+      setMessage('worldMessage', '');
       setButtonLoading('loginBtn', false, 'Connexion...');
       setButtonLoading('registerBtn', false, 'Création...');
       setButtonLoading('createCharacterBtn', false, 'Création...');
