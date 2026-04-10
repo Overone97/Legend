@@ -96,6 +96,7 @@
       color: var(--warn);
     }
     .message.ok { color: var(--ok); }
+    .message.error { color: var(--danger); }
 
     .shell {
       display: none;
@@ -827,10 +828,29 @@
       localStorage.setItem(key, characterId);
     }
 
-    function setMessage(id, text, ok = false) {
+    function setMessage(id, text, state = 'default') {
       const el = document.getElementById(id);
       el.textContent = text;
-      el.className = ok ? 'message ok' : 'message';
+      el.className = `message${state === 'ok' ? ' ok' : state === 'error' ? ' error' : ''}`;
+    }
+
+    function setButtonLoading(buttonId, loading, loadingText) {
+      const button = document.getElementById(buttonId);
+      if (!button.dataset.defaultText) {
+        button.dataset.defaultText = button.textContent;
+      }
+      button.disabled = loading;
+      button.textContent = loading ? loadingText : button.dataset.defaultText;
+    }
+
+    function normalizeError(error, fallbackMessage) {
+      const raw = error?.message || '';
+      if (!raw) return fallbackMessage;
+      if (raw.includes('Invalid login credentials')) return 'Identifiants invalides.';
+      if (raw.includes('User already registered')) return 'Ce compte existe déjà.';
+      if (raw.includes('Email rate limit exceeded')) return 'Trop de tentatives. Réessaie dans un moment.';
+      if (raw.includes('Database error saving new user')) return 'Compte créé côté auth, mais profil impossible à enregistrer.';
+      return raw;
     }
 
     async function renderCharacters() {
@@ -849,7 +869,7 @@
           characters = await accountStore.getCharacters();
         } catch (err) {
           console.error('Remote character load failed:', err);
-          setMessage('characterMessage', 'Impossible de charger les personnages Supabase.');
+          setMessage('characterMessage', 'Impossible de charger les personnages Supabase.', 'error');
           characters = [];
         }
       }
@@ -915,9 +935,10 @@
         const password = document.getElementById('registerPassword').value.trim();
         if (name.length < 3) throw new Error('Nom de compte trop court.');
         if (password.length < 6) throw new Error('Mot de passe trop court. 6 caractères minimum.');
+        setButtonLoading('registerBtn', true, 'Création...');
         if (supabaseClient) {
           await accountStore.signUp(name, password);
-          setMessage('registerMessage', 'Compte Supabase créé. Connecte-toi maintenant.', true);
+          setMessage('registerMessage', 'Compte Supabase créé. Connecte-toi maintenant.', 'ok');
           return;
         }
         accountStore.register(name, password);
@@ -925,7 +946,9 @@
         await renderCharacters();
         game.updateHUD();
       } catch (err) {
-        setMessage('registerMessage', err.message);
+        setMessage('registerMessage', normalizeError(err, 'Impossible de créer le compte.'), 'error');
+      } finally {
+        setButtonLoading('registerBtn', false, 'Création...');
       }
     };
 
@@ -934,6 +957,7 @@
         const name = document.getElementById('loginName').value.trim();
         const password = document.getElementById('loginPassword').value.trim();
         if (!name || !password) throw new Error('Renseigne ton nom de compte et ton mot de passe.');
+        setButtonLoading('loginBtn', true, 'Connexion...');
         await accountStore.signIn?.(name, password);
         if (!supabaseClient) {
           accountStore.login(name, password);
@@ -942,7 +966,9 @@
         await renderCharacters();
         game.updateHUD();
       } catch (err) {
-        setMessage('loginMessage', err.message);
+        setMessage('loginMessage', normalizeError(err, 'Connexion impossible.'), 'error');
+      } finally {
+        setButtonLoading('loginBtn', false, 'Connexion...');
       }
     };
 
@@ -955,7 +981,8 @@
         if (name.length < 3) throw new Error('Nom de personnage trop court.');
         if (name.length > 16) throw new Error('Nom de personnage trop long.');
         if (!/^[a-zA-ZÀ-ÿ0-9_-]+$/.test(name)) throw new Error('Nom invalide. Utilise lettres, chiffres, _ ou -.');
-        setMessage('characterMessage', `Création du ${klass} ${name}...`, true);
+        setMessage('characterMessage', `Création du ${klass} ${name}...`, 'ok');
+        setButtonLoading('createCharacterBtn', true, 'Création...');
         let createdCharacter;
         if (supabaseClient) {
           createdCharacter = await accountStore.createCharacter({ name, class: klass });
@@ -964,10 +991,12 @@
         }
         document.getElementById('characterNameInput').value = '';
         writeSelectedCharacterId(account.id, createdCharacter?.id || null);
-        setMessage('characterMessage', 'Personnage créé et sélectionné.', true);
+        setMessage('characterMessage', 'Personnage créé et sélectionné.', 'ok');
         await renderCharacters();
       } catch (err) {
-        setMessage('characterMessage', err.message);
+        setMessage('characterMessage', normalizeError(err, 'Création du personnage impossible.'), 'error');
+      } finally {
+        setButtonLoading('createCharacterBtn', false, 'Création...');
       }
     };
 
@@ -982,6 +1011,9 @@
       setMessage('loginMessage', '');
       setMessage('registerMessage', '');
       setMessage('characterMessage', '');
+      setButtonLoading('loginBtn', false, 'Connexion...');
+      setButtonLoading('registerBtn', false, 'Création...');
+      setButtonLoading('createCharacterBtn', false, 'Création...');
       ScreenManager.show('welcomeScreen');
     };
 
