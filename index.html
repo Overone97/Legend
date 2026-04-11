@@ -1777,7 +1777,7 @@
       const equipment = character.equipment || { arme: null, amulette: null, cape: null };
       const inventoryEntries = Object.entries(character.inventory || {}).filter(([, qty]) => qty > 0).slice(0, 6);
       const attrs = character.attributes || {};
-      const classData = CLASSES[character.class] || CLASSES.warrior;
+      const classData = game?.classes?.[character.class] || game?.classes?.warrior || { name: character.class || 'Classe', stats: { ap: 0, mp: 0 }, skill: { name: 'Compétence', element: 'neutre' } };
       panel.innerHTML = `
         <div class="hud-card">
           <div class="hud-title"><strong>${character.name}</strong><span class="badge">Niv. ${character.level || 1}</span></div>
