@@ -391,8 +391,9 @@
       <div class="characters-wrap">
         <div class="panel create-card">
           <h3>Zone d'exploration</h3>
-          <p class="hint">Clique une case voisine pour déplacer ton personnage actif sur la carte.</p>
+          <p class="hint">Déplace-toi sur l’écran courant, puis passe de map en map avec les sorties, comme dans un monde découpé.</p>
           <div class="message" id="worldMessage"></div>
+          <div class="badge-row" id="screenExitButtons"></div>
           <div class="world-grid" id="worldGrid"></div>
         </div>
         <div class="panel create-card">
@@ -467,7 +468,23 @@
       selectedCharacter: 'legend_selected_character_v1',
     };
 
-    const STARTING_POSITION = { x: 0, y: 0, mapId: 'Bourg-Legend' };
+    const WORLD_SCREENS = {
+      '0,0': { name: 'Bourg-Legend', exits: { right: '1,0', down: '0,1' } },
+      '1,0': { name: 'Route est', exits: { left: '0,0', right: '2,0', down: '1,1' } },
+      '0,1': { name: 'Bas-bourg', exits: { up: '0,0', right: '1,1', down: '0,2' } },
+      '1,1': { name: 'Route des recrues', exits: { up: '1,0', left: '0,1', right: '2,1', down: '1,2' } },
+      '2,1': { name: 'Porte de l’est', exits: { left: '1,1', down: '2,2', right: '3,1' } },
+      '2,2': { name: 'Bosquet trouble', exits: { up: '2,1', down: '2,3' } },
+      '2,3': { name: 'Chemin des novices', exits: { up: '2,2', right: '3,3' } },
+      '3,3': { name: 'Lisière d’entraînement', exits: { left: '2,3', right: '4,3' } },
+      '4,3': { name: 'Bois des heurts', exits: { left: '3,3', right: '5,3' } },
+      '4,1': { name: 'Rive bleue', exits: { left: '3,1' } },
+      '6,3': { name: 'Clairière des braises', exits: { left: '5,3', right: '7,3' } },
+      '7,3': { name: 'Route du rôdeur', exits: { left: '6,3' } },
+      '4,5': { name: 'Fourré des pertes', exits: {} },
+    };
+
+    const STARTING_POSITION = { x: 0, y: 0, mapId: 'Bourg-Legend', screenId: '0,0' };
     const SAFE_ZONE = new Set(['0,0', '0,1', '0,2', '1,0', '1,1', '1,2']);
     const INITIAL_WORLD_ENCOUNTERS = ['2,2', '4,5', '7,3', '4,1', '6,3'];
     const WORLD_ENCOUNTERS = new Set(INITIAL_WORLD_ENCOUNTERS);
@@ -645,6 +662,7 @@
           equipment: { arme: null, amulette: null, cape: null },
           hp: 100,
           mapId: STARTING_POSITION.mapId,
+          screenId: STARTING_POSITION.screenId,
           x: STARTING_POSITION.x,
           y: STARTING_POSITION.y,
         };
@@ -954,21 +972,27 @@
         const distance = enemy.distanceTo(player);
         if (distance <= enemy.skill.range && distance >= enemy.skill.minRange && enemy.ap >= enemy.skill.costAP) {
           this.castSkill(enemy, player);
-          return this.endTurn();
+          if (!this.gameOver) this.endTurn();
+          return;
         }
         const dx = Math.sign(player.x - enemy.x), dy = Math.sign(player.y - enemy.y);
         const moves = Math.abs(player.x - enemy.x) >= Math.abs(player.y - enemy.y)
           ? [{ x: enemy.x + dx, y: enemy.y }, { x: enemy.x, y: enemy.y + dy }]
           : [{ x: enemy.x, y: enemy.y + dy }, { x: enemy.x + dx, y: enemy.y }];
+        let moved = false;
         for (const move of moves) {
           if (enemy.mp <= 0) break;
           if (this.isCellFree(move.x, move.y)) {
-            enemy.x = move.x; enemy.y = move.y; enemy.mp -= 1; this.addLog(`Le Bandit avance.`);
+            enemy.x = move.x; enemy.y = move.y; enemy.mp -= 1; moved = true; this.addLog(`${enemy.name} avance.`);
           }
         }
         const newDistance = enemy.distanceTo(player);
-        if (newDistance <= enemy.skill.range && newDistance >= enemy.skill.minRange && enemy.ap >= enemy.skill.costAP) this.castSkill(enemy, player);
-        this.endTurn();
+        if (newDistance <= enemy.skill.range && newDistance >= enemy.skill.minRange && enemy.ap >= enemy.skill.costAP) {
+          this.castSkill(enemy, player);
+        } else if (!moved) {
+          this.addLog(`${enemy.name} hésite et passe son tour.`);
+        }
+        if (!this.gameOver) this.endTurn();
       }
 
       castSkill(caster, target) {
@@ -1427,13 +1451,37 @@
       `;
     }
 
+
+    function moveToScreen(direction) {
+      const character = game.currentCharacter;
+      if (!character) return;
+      const currentScreen = WORLD_SCREENS[character.screenId || STARTING_POSITION.screenId];
+      const nextScreenId = currentScreen?.exits?.[direction];
+      if (!nextScreenId) {
+        setMessage('worldMessage', 'Pas de passage dans cette direction.', 'error');
+        return;
+      }
+      const nextScreen = WORLD_SCREENS[nextScreenId];
+      character.screenId = nextScreenId;
+      character.mapId = nextScreen?.name || character.mapId;
+      character.x = 0;
+      character.y = 0;
+      setMessage('worldMessage', `Tu arrives sur ${character.mapId}.`, 'ok');
+      renderWorldPreview();
+    }
+
     function renderWorldGrid() {
       const grid = document.getElementById('worldGrid');
+      const exits = document.getElementById('screenExitButtons');
       const character = game.currentCharacter;
       if (!character) {
         grid.innerHTML = '<div class="hint">Choisis un personnage pour afficher la carte.</div>';
+        exits.innerHTML = '';
         return;
       }
+      const screen = WORLD_SCREENS[character.screenId || STARTING_POSITION.screenId] || WORLD_SCREENS[STARTING_POSITION.screenId];
+      exits.innerHTML = ['up','down','left','right'].map(direction => `<button class="ghost" data-exit="${direction}" ${screen?.exits?.[direction] ? '' : 'disabled'}>${direction}</button>`).join('');
+      exits.querySelectorAll('[data-exit]').forEach(button => button.addEventListener('click', () => moveToScreen(button.dataset.exit)));
       const x = character.x ?? 0;
       const y = character.y ?? 0;
       const isAdjacent = (tx, ty) => Math.abs(tx - x) + Math.abs(ty - y) === 1;
