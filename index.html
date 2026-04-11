@@ -207,6 +207,7 @@
     .scene-titlecard, .scene-hudcard { background: rgba(15,23,42,0.66); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 14px; backdrop-filter: blur(8px); }
     .scene-actors { position: absolute; inset: 0; z-index: 2; }
     .scene-actor { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 6px; }
+    .scene-actor button { all: unset; display: grid; justify-items: center; gap: 6px; cursor: pointer; }
     .scene-sprite { width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center; font-size: 28px; background: rgba(15,23,42,0.78); border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 10px 24px rgba(0,0,0,0.28); }
     .scene-actor.player .scene-sprite { background: rgba(20,83,45,0.88); border-color: rgba(110,231,183,0.5); }
     .scene-actor.npc .scene-sprite { background: rgba(88,28,135,0.82); }
@@ -1690,6 +1691,22 @@
 
 
 
+
+    function inspectSceneElement(type, payload = {}) {
+      if (type === 'npc') {
+        setMessage('worldMessage', `${payload.name} (${payload.role}) : ${payload.hint}`, 'ok');
+        return;
+      }
+      if (type === 'landmark') {
+        setMessage('worldMessage', `${payload.label} : ${payload.type}.`, 'ok');
+        return;
+      }
+      if (type === 'player') {
+        setMessage('worldMessage', `Tu es ${payload.name}, actuellement sur ${payload.mapId}.`, 'ok');
+        return;
+      }
+    }
+
     function renderGameHud() {
       const panel = document.getElementById('gameHudPanel');
       const character = game.currentCharacter;
@@ -1763,15 +1780,16 @@
       const decor = SCREEN_DECOR[screenId] || { landmarks: {}, npcs: [] };
       const playerLeft = 18 + ((character.localX ?? 2) * 16);
       const playerTop = 28 + ((character.localY ?? 2) * 12);
-      const actorNodes = [`<div class="scene-actor player" style="left:${playerLeft}%;top:${playerTop}%;"><div class="scene-sprite">🧍</div><div class="scene-label">${character.name}</div></div>`];
+      const actorNodes = [`<div class="scene-actor player" style="left:${playerLeft}%;top:${playerTop}%;"><button data-scene-type="player" data-name="${character.name}" data-map="${character.mapId}"><div class="scene-sprite">🧍</div><div class="scene-label">${character.name}</div></button></div>`];
       Object.entries(decor.landmarks || {}).forEach(([pos, landmark]) => {
         const [lx, ly] = pos.split(',').map(Number);
-        actorNodes.push(`<div class="scene-actor poi" style="left:${18 + lx * 16}%;top:${28 + ly * 12}%;"><div class="scene-sprite">${landmark.icon}</div><div class="scene-label">${landmark.label}</div></div>`);
+        actorNodes.push(`<div class="scene-actor poi" style="left:${18 + lx * 16}%;top:${28 + ly * 12}%;"><button data-scene-type="landmark" data-label="${landmark.label}" data-role="${landmark.type}"><div class="scene-sprite">${landmark.icon}</div><div class="scene-label">${landmark.label}</div></button></div>`);
       });
       (decor.npcs || []).forEach((npc, index) => {
-        actorNodes.push(`<div class="scene-actor npc" style="left:${22 + index * 18}%;top:${62 - index * 6}%;"><div class="scene-sprite">🧑</div><div class="scene-label">${npc.name}</div></div>`);
+        actorNodes.push(`<div class="scene-actor npc" style="left:${22 + index * 18}%;top:${62 - index * 6}%;"><button data-scene-type="npc" data-name="${npc.name}" data-role="${npc.role}" data-hint="${npc.hint}"><div class="scene-sprite">🧑</div><div class="scene-label">${npc.name}</div></button></div>`);
       });
       actors.innerHTML = actorNodes.join('');
+      actors.querySelectorAll('[data-scene-type]').forEach(node => node.addEventListener('click', () => inspectSceneElement(node.dataset.sceneType, { name: node.dataset.name, mapId: node.dataset.map, label: node.dataset.label, role: node.dataset.role, hint: node.dataset.hint, type: node.dataset.role })));
       const exitButtons = [];
       if (screen?.exits?.up) exitButtons.push('<div class="scene-exit" style="top:18px;left:50%;transform:translateX(-50%);"><button class="ghost" data-scene-exit="up">↑ Nord</button></div>');
       if (screen?.exits?.down) exitButtons.push('<div class="scene-exit" style="bottom:18px;left:50%;transform:translateX(-50%);"><button class="ghost" data-scene-exit="down">↓ Sud</button></div>');
