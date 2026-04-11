@@ -566,20 +566,20 @@
       selectedCharacter: 'legend_selected_character_v1',
     };
 
-    const WORLD_SCREENS = {
-      '0,0': { name: 'Bourg-Legend', biome: 'safe', exits: { right: '1,0', down: '0,1' } },
-      '1,0': { name: 'Route est', biome: 'road', exits: { left: '0,0', right: '2,0', down: '1,1' } },
-      '0,1': { name: 'Bas-bourg', biome: 'safe', exits: { up: '0,0', right: '1,1', down: '0,2' } },
-      '1,1': { name: 'Route des recrues', biome: 'road', exits: { up: '1,0', left: '0,1', right: '2,1', down: '1,2' } },
-      '2,1': { name: 'Porte de l’est', biome: 'road', exits: { left: '1,1', down: '2,2', right: '3,1' } },
-      '2,2': { name: 'Bosquet trouble', biome: 'forest', exits: { up: '2,1', down: '2,3' } },
-      '2,3': { name: 'Chemin des novices', biome: 'road', exits: { up: '2,2', right: '3,3' } },
-      '3,3': { name: 'Lisière d’entraînement', biome: 'plains', exits: { left: '2,3', right: '4,3' } },
-      '4,3': { name: 'Bois des heurts', biome: 'forest', exits: { left: '3,3', right: '5,3' } },
-      '4,1': { name: 'Rive bleue', biome: 'water', exits: { left: '3,1' } },
-      '6,3': { name: 'Clairière des braises', biome: 'fire', exits: { left: '5,3', right: '7,3' } },
-      '7,3': { name: 'Route du rôdeur', biome: 'road', exits: { left: '6,3' } },
-      '4,5': { name: 'Fourré des pertes', biome: 'forest', exits: {} },
+    const MAPS = {
+      'bourg-centre': { name: 'Bourg-Legend', biome: 'safe', exits: { right: 'bourg-est', down: 'bourg-sud' } },
+      'bourg-est': { name: 'Route est', biome: 'road', exits: { left: 'bourg-centre', right: 'porte-est', down: 'route-recrues' } },
+      'bourg-sud': { name: 'Bas-bourg', biome: 'safe', exits: { up: 'bourg-centre', right: 'route-recrues', down: 'bourg-basses' } },
+      'route-recrues': { name: 'Route des recrues', biome: 'road', exits: { up: 'bourg-est', left: 'bourg-sud', right: 'porte-est', down: 'chemin-novices' } },
+      'porte-est': { name: 'Porte de l’est', biome: 'road', exits: { left: 'route-recrues', down: 'bosquet-trouble', right: 'rives-claires' } },
+      'bosquet-trouble': { name: 'Bosquet trouble', biome: 'forest', exits: { up: 'porte-est', down: 'chemin-novices' } },
+      'chemin-novices': { name: 'Chemin des novices', biome: 'road', exits: { up: 'bosquet-trouble', right: 'lisiere-entrainement' } },
+      'lisiere-entrainement': { name: 'Lisière d’entraînement', biome: 'plains', exits: { left: 'chemin-novices', right: 'bois-heurts' } },
+      'bois-heurts': { name: 'Bois des heurts', biome: 'forest', exits: { left: 'lisiere-entrainement', right: 'clairiere-braises' } },
+      'rives-claires': { name: 'Rive bleue', biome: 'water', exits: { left: 'porte-est' } },
+      'clairiere-braises': { name: 'Clairière des braises', biome: 'fire', exits: { left: 'bois-heurts', right: 'route-rodeur' } },
+      'route-rodeur': { name: 'Route du rôdeur', biome: 'road', exits: { left: 'clairiere-braises' } },
+      'bourg-basses': { name: 'Fourré des pertes', biome: 'forest', exits: {} },
     };
 
 
@@ -672,7 +672,7 @@
     }
 
     const SCENE_ILLUSTRATIONS = {
-      '0,0': {
+      'bourg-centre': {
         sky: 'linear-gradient(180deg, rgba(241,245,249,0.95), rgba(226,232,240,0.55) 30%, rgba(203,213,225,0.1))',
         layers: [
           { style: 'left:4%;top:6%;width:26%;height:42%;background:radial-gradient(circle at 50% 40%, rgba(255,255,255,0.9), rgba(255,255,255,0));filter:blur(12px);opacity:0.55;' },
@@ -682,7 +682,7 @@
           { style: 'right:12%;bottom:14%;width:18%;height:34%;background:linear-gradient(180deg, rgba(17,24,39,0.15), rgba(17,24,39,0.9));clip-path:polygon(50% 0, 100% 20%, 68% 100%, 32% 100%, 0 20%);' },
         ],
       },
-      '1,1': {
+      'route-recrues': {
         sky: 'linear-gradient(180deg, rgba(250,245,214,0.92), rgba(234,179,8,0.18) 32%, rgba(120,113,108,0.08))',
         layers: [
           { style: 'left:0;right:0;bottom:0;height:34%;background:linear-gradient(180deg, rgba(120,113,108,0), rgba(68,64,60,0.65)), repeating-linear-gradient(90deg, rgba(120,113,108,0.35), rgba(120,113,108,0.35) 6%, rgba(168,162,158,0.2) 6%, rgba(168,162,158,0.2) 12%);' },
@@ -690,7 +690,7 @@
           { style: 'right:10%;bottom:20%;width:22%;height:18%;background:linear-gradient(180deg, rgba(71,85,105,0.1), rgba(51,65,85,0.86));clip-path:polygon(0 100%, 10% 46%, 30% 34%, 48% 48%, 66% 24%, 84% 40%, 100% 30%, 100% 100%);' },
         ],
       },
-      '2,2': {
+      'bosquet-trouble': {
         sky: 'linear-gradient(180deg, rgba(196,181,253,0.18), rgba(20,83,45,0.16) 35%, rgba(17,24,39,0.1))',
         layers: [
           { style: 'left:-2%;bottom:0;width:24%;height:62%;background:linear-gradient(180deg, rgba(21,128,61,0), rgba(20,83,45,0.95));clip-path:polygon(44% 0, 80% 36%, 66% 100%, 20% 100%, 0 48%);' },
@@ -715,7 +715,7 @@
     };
 
     const SCREEN_DECOR = {
-      '0,0': {
+      'bourg-centre': {
         landmarks: {
           '1,1': { icon: '🏠', label: 'Maison du repos', type: 'Refuge' },
           '3,1': { icon: '🛒', label: 'Échoppe', type: 'Marchand' },
@@ -726,7 +726,7 @@
           { name: 'Sera', role: 'Marchande', hint: 'Tient le coin sûr de Bourg-Legend.', action: 'heal' },
         ],
       },
-      '1,1': {
+      'route-recrues': {
         landmarks: {
           '2,0': { icon: '🪧', label: 'Panneau', type: 'Direction' },
           '2,2': { icon: '⚑', label: 'Route des recrues', type: 'Passage' },
@@ -735,7 +735,7 @@
           { name: 'Rouk', role: 'Éclaireur', hint: 'Préviens que la route devient moins gentille.', action: 'warn' },
         ],
       },
-      '2,1': {
+      'porte-est': {
         landmarks: {
           '2,2': { icon: '🚪', label: 'Porte de l’est', type: 'Transition' },
         },
@@ -743,24 +743,24 @@
       },
     };
 
-    const STARTING_POSITION = { x: 0, y: 0, mapId: 'Bourg-Legend', screenId: '0,0' };
-    const SAFE_ZONE = new Set(['0,0', '0,1', '0,2', '1,0', '1,1', '1,2']);
-    const INITIAL_WORLD_ENCOUNTERS = ['2,2', '4,5', '7,3', '4,1', '6,3'];
+    const STARTING_POSITION = { x: 0, y: 0, mapId: 'Bourg-Legend', mapKey: 'bourg-centre' };
+    const SAFE_ZONE = new Set(['bourg-centre', 'bourg-sud', 'bourg-est', 'route-recrues']);
+    const INITIAL_WORLD_ENCOUNTERS = ['bosquet-trouble', 'bourg-basses', 'route-rodeur', 'rives-claires', 'clairiere-braises'];
     const WORLD_ENCOUNTERS = new Set(INITIAL_WORLD_ENCOUNTERS);
     const WORLD_TILE_TYPES = {
-      '0,0': 'safe', '1,0': 'road', '2,0': 'road', '3,0': 'road', '4,0': 'plains',
-      '0,1': 'safe', '1,1': 'road', '2,1': 'road', '3,1': 'plains', '4,1': 'water',
-      '0,2': 'safe', '1,2': 'road', '2,2': 'forest', '3,2': 'plains', '4,2': 'water',
-      '0,3': 'safe', '1,3': 'road', '2,3': 'road', '3,3': 'plains', '4,3': 'forest',
-      '5,3': 'forest', '6,3': 'plains', '7,3': 'forest', '8,3': 'road',
-      '4,5': 'forest', '5,5': 'plains', '6,5': 'road', '7,5': 'road'
+      'bourg-centre': 'safe', 'bourg-est': 'road', '2,0': 'road', '3,0': 'road', '4,0': 'plains',
+      'bourg-sud': 'safe', 'route-recrues': 'road', 'porte-est': 'road', '3,1': 'plains', 'rives-claires': 'water',
+      '0,2': 'safe', '1,2': 'road', 'bosquet-trouble': 'forest', '3,2': 'plains', '4,2': 'water',
+      '0,3': 'safe', '1,3': 'road', 'chemin-novices': 'road', 'lisiere-entrainement': 'plains', 'bois-heurts': 'forest',
+      '5,3': 'forest', 'clairiere-braises': 'plains', 'route-rodeur': 'forest', '8,3': 'road',
+      'bourg-basses': 'forest', '5,5': 'plains', '6,5': 'road', '7,5': 'road'
     };
     const ENCOUNTER_CONFIG = {
-      '2,2': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, xp: 18, resistances: { terre: 10 }, resources: [{ key: 'bois_sombre', name: 'Bois sombre', qty: 2 }, { key: 'ecorce_lourde', name: 'Écorce lourde', qty: 1 }], color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, element: 'terre', description: 'Une attaque sale mais encore gérable.' } },
-      '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, resistances: { terre: 15, feu: -5 }, resources: [{ key: 'griffe_noire', name: 'Griffe noire', qty: 1 }, { key: 'peau_rapee', name: 'Peau râpée', qty: 2 }], color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, element: 'terre', description: 'Une frappe violente pour les zones dangereuses.' } },
-      '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, resistances: { air: 10 }, resources: [{ key: 'fer_use', name: 'Fer usé', qty: 2 }, { key: 'plume_rapide', name: 'Plume rapide', qty: 1 }], color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, element: 'air', description: 'Un projectile rapide qui punit les distances mal gérées.' } },
-      '4,1': { name: 'Ondine des rives', hp: 88, ap: 6, mp: 4, speed: 9, xp: 24, resistances: { eau: 20, feu: -10 }, resources: [{ key: 'perle_froide', name: 'Perle froide', qty: 1 }], color: '#0ea5e9', skill: { name: 'Jet d’écume', costAP: 4, range: 3, damage: 20, element: 'eau', description: 'Une attaque d’eau vive qui use à distance.' } },
-      '6,3': { name: 'Cendrelame', hp: 100, ap: 7, mp: 3, speed: 10, xp: 30, resistances: { feu: 18, eau: -10 }, resources: [{ key: 'braise_tiede', name: 'Braise tiède', qty: 2 }], color: '#dc2626', skill: { name: 'Lame ardente', costAP: 5, range: 2, damage: 24, element: 'feu', description: 'Une coupe embrasée qui annonce des ennemis plus agressifs.' } },
+      'bosquet-trouble': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, xp: 18, resistances: { terre: 10 }, resources: [{ key: 'bois_sombre', name: 'Bois sombre', qty: 2 }, { key: 'ecorce_lourde', name: 'Écorce lourde', qty: 1 }], color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, element: 'terre', description: 'Une attaque sale mais encore gérable.' } },
+      'bourg-basses': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, resistances: { terre: 15, feu: -5 }, resources: [{ key: 'griffe_noire', name: 'Griffe noire', qty: 1 }, { key: 'peau_rapee', name: 'Peau râpée', qty: 2 }], color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, element: 'terre', description: 'Une frappe violente pour les zones dangereuses.' } },
+      'route-rodeur': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, resistances: { air: 10 }, resources: [{ key: 'fer_use', name: 'Fer usé', qty: 2 }, { key: 'plume_rapide', name: 'Plume rapide', qty: 1 }], color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, element: 'air', description: 'Un projectile rapide qui punit les distances mal gérées.' } },
+      'rives-claires': { name: 'Ondine des rives', hp: 88, ap: 6, mp: 4, speed: 9, xp: 24, resistances: { eau: 20, feu: -10 }, resources: [{ key: 'perle_froide', name: 'Perle froide', qty: 1 }], color: '#0ea5e9', skill: { name: 'Jet d’écume', costAP: 4, range: 3, damage: 20, element: 'eau', description: 'Une attaque d’eau vive qui use à distance.' } },
+      'clairiere-braises': { name: 'Cendrelame', hp: 100, ap: 7, mp: 3, speed: 10, xp: 30, resistances: { feu: 18, eau: -10 }, resources: [{ key: 'braise_tiede', name: 'Braise tiède', qty: 2 }], color: '#dc2626', skill: { name: 'Lame ardente', costAP: 5, range: 2, damage: 24, element: 'feu', description: 'Une coupe embrasée qui annonce des ennemis plus agressifs.' } },
     };
 
     const CRAFT_RECIPES = [
@@ -815,52 +815,52 @@
     };
 
     const WORLD_POI = {
-      '0,0': {
+      'bourg-centre': {
         name: 'Bourg-Legend',
         type: 'Ville de départ',
         description: 'Le premier refuge du joueur. Ici, on souffle, on se prépare, et on repart vers la route.',
       },
-      '1,1': {
+      'route-recrues': {
         name: 'Route des recrues',
         type: 'Route',
         description: 'Le chemin le plus sûr pour quitter la ville sans se faire ouvrir trop vite.',
       },
-      '2,1': {
+      'porte-est': {
         name: 'Porte de l’est',
         type: 'Sortie de ville',
         description: 'Le passage naturel pour quitter Bourg-Legend et comprendre où l’aventure commence vraiment.',
       },
-      '2,2': {
+      'bosquet-trouble': {
         name: 'Bosquet trouble',
         type: 'Zone dangereuse',
         description: 'Un coin boisé où les embuscades sont fréquentes. Clairement pas un endroit pour flâner.',
       },
-      '2,3': {
+      'chemin-novices': {
         name: 'Chemin des novices',
         type: 'Route guidée',
         description: 'Une continuité rassurante entre la ville sûre et les premières zones un peu plus hostiles.',
       },
-      '3,3': {
+      'lisiere-entrainement': {
         name: 'Lisière d’entraînement',
         type: 'Zone d’apprentissage',
         description: 'Les premiers vrais pas hors protection. Assez calme pour apprendre, pas assez calme pour dormir.',
       },
-      '4,3': {
+      'bois-heurts': {
         name: 'Bois des heurts',
         type: 'Zone de risque moyen',
         description: 'On sent tout de suite que les choses deviennent moins gentilles. Ici, tu n’es plus vraiment chez toi.',
       },
-      '4,5': {
+      'bourg-basses': {
         name: 'Fourré des pertes',
         type: 'Zone dangereuse',
         description: 'Une poche plus profonde de danger. Si tu y vas trop tôt, tu vas le sentir passer.',
       },
-      '4,1': {
+      'rives-claires': {
         name: 'Rive bleue',
         type: 'Zone aquatique',
         description: 'Un bord d’eau calme en apparence, mais parfait pour introduire des menaces liées à l’élément eau.',
       },
-      '6,3': {
+      'clairiere-braises': {
         name: 'Clairière des braises',
         type: 'Zone élémentaire feu',
         description: 'Un terrain plus chaud, plus sec, où les ennemis commencent à brûler autant qu’ils frappent.',
@@ -921,7 +921,7 @@
           equipment: { arme: null, amulette: null, cape: null },
           hp: 100,
           mapId: STARTING_POSITION.mapId,
-          screenId: STARTING_POSITION.screenId,
+          mapKey: STARTING_POSITION.mapKey,
           x: STARTING_POSITION.x,
           y: STARTING_POSITION.y,
           localX: 2,
@@ -1716,14 +1716,14 @@
     function moveToScreen(direction) {
       const character = game.currentCharacter;
       if (!character) return;
-      const currentScreen = WORLD_SCREENS[character.screenId || STARTING_POSITION.screenId];
+      const currentScreen = MAPS[character.mapKey || STARTING_POSITION.mapKey];
       const nextScreenId = currentScreen?.exits?.[direction];
       if (!nextScreenId) {
         setMessage('worldMessage', 'Pas de passage dans cette direction.', 'error');
         return;
       }
-      const nextScreen = WORLD_SCREENS[nextScreenId];
-      character.screenId = nextScreenId;
+      const nextScreen = MAPS[nextScreenId];
+      character.mapKey = nextScreenId;
       character.mapId = nextScreen?.name || character.mapId;
       character.localX = direction === 'right' ? 0 : direction === 'left' ? LOCAL_SCREEN_SIZE - 1 : 2;
       character.localY = direction === 'down' ? 0 : direction === 'up' ? LOCAL_SCREEN_SIZE - 1 : 2;
@@ -1831,13 +1831,13 @@
         exits.innerHTML = '';
         return;
       }
-      const screenId = character.screenId || STARTING_POSITION.screenId;
-      const screen = WORLD_SCREENS[screenId] || WORLD_SCREENS[STARTING_POSITION.screenId];
+      const mapKey = character.mapKey || STARTING_POSITION.mapKey;
+      const screen = MAPS[mapKey] || MAPS[STARTING_POSITION.mapKey];
       const biome = screen?.biome || 'safe';
-      const illustration = SCENE_ILLUSTRATIONS[screenId] || SCENE_ILLUSTRATIONS.default;
+      const illustration = SCENE_ILLUSTRATIONS[mapKey] || SCENE_ILLUSTRATIONS.default;
       backdrop.style.background = `${illustration.sky}, ${SCENE_BACKDROPS[biome] || SCENE_BACKDROPS.safe}`;
       backdrop.innerHTML = `<div class="scene-parallax">${(illustration.layers || []).map(layer => `<div class="scene-illustration-layer" style="${layer.style}"></div>`).join('')}</div>`;
-      const decor = SCREEN_DECOR[screenId] || { landmarks: {}, npcs: [] };
+      const decor = SCREEN_DECOR[mapKey] || { landmarks: {}, npcs: [] };
       const playerLeft = 18 + ((character.localX ?? 2) * 16);
       const playerTop = 28 + ((character.localY ?? 2) * 12);
       const actorNodes = [`<div class="scene-actor player" style="left:${playerLeft}%;top:${playerTop}%;"><button data-scene-type="player" data-name="${character.name}" data-map="${character.mapId}"><div class="scene-sprite">🧍</div><div class="scene-label">${character.name}</div></button></div>`];
@@ -1869,7 +1869,7 @@
         exits.innerHTML = '';
         return;
       }
-      const screen = WORLD_SCREENS[character.screenId || STARTING_POSITION.screenId] || WORLD_SCREENS[STARTING_POSITION.screenId];
+      const screen = MAPS[character.mapKey || STARTING_POSITION.mapKey] || MAPS[STARTING_POSITION.mapKey];
       const exitLabels = { up: '↑ Nord', down: '↓ Sud', left: '← Ouest', right: '→ Est' };
       exits.className = 'screen-nav';
       exits.innerHTML = `
@@ -1888,7 +1888,7 @@
       const y = character.localY ?? 2;
       const isAdjacent = (tx, ty) => Math.abs(tx - x) + Math.abs(ty - y) === 1;
       const layout = LOCAL_SCREEN_LAYOUTS[screen?.biome || 'plains'] || LOCAL_SCREEN_LAYOUTS.plains;
-      const worldKey = character.screenId || STARTING_POSITION.screenId;
+      const worldKey = character.mapKey || STARTING_POSITION.mapKey;
       grid.style.gridTemplateColumns = `repeat(${LOCAL_SCREEN_SIZE}, 1fr)`;
       grid.innerHTML = Array.from({ length: LOCAL_SCREEN_SIZE * LOCAL_SCREEN_SIZE }, (_, index) => {
         const tx = index % LOCAL_SCREEN_SIZE;
@@ -1905,7 +1905,7 @@
           ? '🧍 Toi'
           : decor?.label || poi?.name || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? '⚔ Rencontre' : (tileType === 'safe' ? 'Ville' : tileType === 'road' ? 'Route' : tileType === 'forest' ? 'Forêt' : tileType === 'water' ? 'Eau' : tileType === 'fire' ? 'Braises' : 'Plaine'));
         const meta = tx === x && ty === y
-          ? `${character.mapId || 'Zone'} • écran ${character.screenId || '0,0'}`
+          ? `${character.mapId || 'Zone'} • écran ${character.mapKey || 'bourg-centre'}`
           : decor?.type || poi?.type || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? 'Danger' : tileType);
         const mark = tx === x && ty === y ? '🧍' : decor?.icon || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? '⚔' : '');
         return `<button class="${classes.join(' ')}" data-x="${tx}" data-y="${ty}"><span class="world-tile-mark">${mark}</span><strong class="world-tile-label">${title}</strong><span class="world-tile-meta">${meta}</span></button>`;
@@ -1929,32 +1929,32 @@
         renderWorldGrid();
         return;
       }
-      const key = character.screenId || STARTING_POSITION.screenId;
+      const key = character.mapKey || STARTING_POSITION.mapKey;
       const poi = WORLD_POI[key];
       const isSafeZone = SAFE_ZONE.has(key);
-      const zoneHint = key === '3,3'
+      const zoneHint = key === 'lisiere-entrainement'
         ? 'Tu quittes doucement la zone d’apprentissage.'
-        : key === '4,3'
+        : key === 'bois-heurts'
           ? 'Attention, la pression monte ici.'
-          : key === '4,5'
+          : key === 'bourg-basses'
             ? 'Zone franchement dangereuse. Mieux vaut être prêt.'
             : '';
-      const screen = WORLD_SCREENS[character.screenId || STARTING_POSITION.screenId];
+      const screen = MAPS[character.mapKey || STARTING_POSITION.mapKey];
       const exitLabels = { up: '↑ Nord', down: '↓ Sud', left: '← Ouest', right: '→ Est' };
       preview.innerHTML = `
         <h4>${screen?.name || character.mapId || 'Zone inconnue'}</h4>
         <div class="badge-row">
           <span class="badge">Classe ${character.class}</span>
-          <span class="badge">Écran ${character.screenId || '0,0'}</span>
+          <span class="badge">Écran ${character.mapKey || 'bourg-centre'}</span>
           <span class="badge">Case locale ${character.localX ?? 2},${character.localY ?? 2}</span>
         </div>
         <div class="hint">Scène principale du jeu, avec HUD latéral et transitions intégrées.</div>
         <div class="badge-row">${Object.keys(screen?.exits || {}).length ? Object.keys(screen.exits).map(direction => `<span class="badge">${exitLabels[direction]}</span>`).join('') : '<span class="badge">Aucune sortie claire</span>'}</div>
       `;
-      if (key === '0,0') {
+      if (key === 'bourg-centre') {
         setMessage('worldMessage', 'Tu es à Bourg-Legend. Suis la route vers l’est pour quitter la ville.', 'ok');
       } else if (zoneHint) {
-        setMessage('worldMessage', zoneHint, key === '4,5' ? 'error' : 'ok');
+        setMessage('worldMessage', zoneHint, key === 'bourg-basses' ? 'error' : 'ok');
       }
       renderMainScene();
       renderGameHud();
@@ -2069,7 +2069,7 @@
       }
       character.localX = targetX;
       character.localY = targetY;
-      const positionKey = character.screenId || STARTING_POSITION.screenId;
+      const positionKey = character.mapKey || STARTING_POSITION.mapKey;
       document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • écran ${positionKey} • case ${character.localX}, ${character.localY}`;
       if (!SAFE_ZONE.has(positionKey) && WORLD_ENCOUNTERS.has(positionKey) && targetX === 2 && targetY === 2) {
         const encounter = ENCOUNTER_CONFIG[positionKey];
@@ -2089,7 +2089,7 @@
       const character = game.currentCharacter;
       document.getElementById('returnToWorldBtn').style.display = 'none';
       if (result === 'victory' && character) {
-        WORLD_ENCOUNTERS.delete(character.screenId || STARTING_POSITION.screenId);
+        WORLD_ENCOUNTERS.delete(character.mapKey || STARTING_POSITION.mapKey);
         const rewardText = game.lastReward
           ? `Victoire. +${game.lastReward.xp} XP${game.lastReward.levelUp ? ' et niveau gagné' : ''}${game.lastReward.resources?.length ? `, butin: ${game.lastReward.resources.map(r => `+${r.qty} ${r.name}`).join(', ')}` : ''}.`
           : 'Victoire. La zone est sécurisée pour le moment.';
