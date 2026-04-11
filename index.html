@@ -514,20 +514,68 @@
     };
 
     const WORLD_SCREENS = {
-      '0,0': { name: 'Bourg-Legend', exits: { right: '1,0', down: '0,1' } },
-      '1,0': { name: 'Route est', exits: { left: '0,0', right: '2,0', down: '1,1' } },
-      '0,1': { name: 'Bas-bourg', exits: { up: '0,0', right: '1,1', down: '0,2' } },
-      '1,1': { name: 'Route des recrues', exits: { up: '1,0', left: '0,1', right: '2,1', down: '1,2' } },
-      '2,1': { name: 'Porte de l’est', exits: { left: '1,1', down: '2,2', right: '3,1' } },
-      '2,2': { name: 'Bosquet trouble', exits: { up: '2,1', down: '2,3' } },
-      '2,3': { name: 'Chemin des novices', exits: { up: '2,2', right: '3,3' } },
-      '3,3': { name: 'Lisière d’entraînement', exits: { left: '2,3', right: '4,3' } },
-      '4,3': { name: 'Bois des heurts', exits: { left: '3,3', right: '5,3' } },
-      '4,1': { name: 'Rive bleue', exits: { left: '3,1' } },
-      '6,3': { name: 'Clairière des braises', exits: { left: '5,3', right: '7,3' } },
-      '7,3': { name: 'Route du rôdeur', exits: { left: '6,3' } },
-      '4,5': { name: 'Fourré des pertes', exits: {} },
+      '0,0': { name: 'Bourg-Legend', biome: 'safe', exits: { right: '1,0', down: '0,1' } },
+      '1,0': { name: 'Route est', biome: 'road', exits: { left: '0,0', right: '2,0', down: '1,1' } },
+      '0,1': { name: 'Bas-bourg', biome: 'safe', exits: { up: '0,0', right: '1,1', down: '0,2' } },
+      '1,1': { name: 'Route des recrues', biome: 'road', exits: { up: '1,0', left: '0,1', right: '2,1', down: '1,2' } },
+      '2,1': { name: 'Porte de l’est', biome: 'road', exits: { left: '1,1', down: '2,2', right: '3,1' } },
+      '2,2': { name: 'Bosquet trouble', biome: 'forest', exits: { up: '2,1', down: '2,3' } },
+      '2,3': { name: 'Chemin des novices', biome: 'road', exits: { up: '2,2', right: '3,3' } },
+      '3,3': { name: 'Lisière d’entraînement', biome: 'plains', exits: { left: '2,3', right: '4,3' } },
+      '4,3': { name: 'Bois des heurts', biome: 'forest', exits: { left: '3,3', right: '5,3' } },
+      '4,1': { name: 'Rive bleue', biome: 'water', exits: { left: '3,1' } },
+      '6,3': { name: 'Clairière des braises', biome: 'fire', exits: { left: '5,3', right: '7,3' } },
+      '7,3': { name: 'Route du rôdeur', biome: 'road', exits: { left: '6,3' } },
+      '4,5': { name: 'Fourré des pertes', biome: 'forest', exits: {} },
     };
+
+
+    const LOCAL_SCREEN_LAYOUTS = {
+      safe: [
+        ['safe','safe','road','road','road'],
+        ['safe','safe','road','safe','safe'],
+        ['safe','safe','road','safe','safe'],
+        ['safe','safe','road','safe','safe'],
+        ['safe','safe','road','safe','safe'],
+      ],
+      road: [
+        ['plains','plains','road','road','road'],
+        ['plains','plains','road','plains','plains'],
+        ['plains','plains','road','plains','plains'],
+        ['plains','plains','road','plains','plains'],
+        ['plains','plains','road','plains','plains'],
+      ],
+      forest: [
+        ['forest','forest','plains','forest','forest'],
+        ['forest','plains','plains','plains','forest'],
+        ['forest','forest','plains','forest','forest'],
+        ['forest','plains','plains','plains','forest'],
+        ['forest','forest','plains','forest','forest'],
+      ],
+      water: [
+        ['water','water','plains','water','water'],
+        ['water','plains','plains','plains','water'],
+        ['water','plains','road','plains','water'],
+        ['water','plains','plains','plains','water'],
+        ['water','water','plains','water','water'],
+      ],
+      plains: [
+        ['plains','plains','plains','plains','plains'],
+        ['plains','road','road','road','plains'],
+        ['plains','plains','plains','plains','plains'],
+        ['plains','plains','plains','plains','plains'],
+        ['plains','plains','plains','plains','plains'],
+      ],
+      fire: [
+        ['fire','fire','plains','fire','fire'],
+        ['fire','plains','plains','plains','fire'],
+        ['plains','plains','road','plains','plains'],
+        ['fire','plains','plains','plains','fire'],
+        ['fire','fire','plains','fire','fire'],
+      ],
+    };
+
+    const LOCAL_SCREEN_SIZE = 5;
 
     const STARTING_POSITION = { x: 0, y: 0, mapId: 'Bourg-Legend', screenId: '0,0' };
     const SAFE_ZONE = new Set(['0,0', '0,1', '0,2', '1,0', '1,1', '1,2']);
@@ -710,6 +758,8 @@
           screenId: STARTING_POSITION.screenId,
           x: STARTING_POSITION.x,
           y: STARTING_POSITION.y,
+          localX: 2,
+          localY: 2,
         };
         account.characters.push(character);
         this.updateAccount(account);
@@ -1509,8 +1559,8 @@
       const nextScreen = WORLD_SCREENS[nextScreenId];
       character.screenId = nextScreenId;
       character.mapId = nextScreen?.name || character.mapId;
-      character.x = 0;
-      character.y = 0;
+      character.localX = direction === 'right' ? 0 : direction === 'left' ? LOCAL_SCREEN_SIZE - 1 : 2;
+      character.localY = direction === 'down' ? 0 : direction === 'up' ? LOCAL_SCREEN_SIZE - 1 : 2;
       setMessage('worldMessage', `Tu arrives sur ${character.mapId}.`, 'ok');
       renderWorldPreview();
     }
@@ -1539,20 +1589,29 @@
         <span class="screen-nav-spacer"></span>
       `;
       exits.querySelectorAll('[data-exit]').forEach(button => button.addEventListener('click', () => moveToScreen(button.dataset.exit)));
-      const x = character.x ?? 0;
-      const y = character.y ?? 0;
+      const x = character.localX ?? 2;
+      const y = character.localY ?? 2;
       const isAdjacent = (tx, ty) => Math.abs(tx - x) + Math.abs(ty - y) === 1;
-      grid.innerHTML = Array.from({ length: 100 }, (_, index) => {
-        const tx = index % 10;
-        const ty = Math.floor(index / 10);
-        const key = `${tx},${ty}`;
-        const tileType = WORLD_TILE_TYPES[key] || 'plains';
+      const layout = LOCAL_SCREEN_LAYOUTS[screen?.biome || 'plains'] || LOCAL_SCREEN_LAYOUTS.plains;
+      const worldKey = character.screenId || STARTING_POSITION.screenId;
+      grid.style.gridTemplateColumns = `repeat(${LOCAL_SCREEN_SIZE}, 1fr)`;
+      grid.innerHTML = Array.from({ length: LOCAL_SCREEN_SIZE * LOCAL_SCREEN_SIZE }, (_, index) => {
+        const tx = index % LOCAL_SCREEN_SIZE;
+        const ty = Math.floor(index / LOCAL_SCREEN_SIZE);
+        const tileType = layout[ty]?.[tx] || screen?.biome || 'plains';
+        const poi = tx === 2 && ty === 2 ? WORLD_POI[worldKey] : null;
         const classes = ['world-tile', tileType];
-        if (WORLD_ENCOUNTERS.has(key)) classes.push('encounter');
+        if (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2) classes.push('encounter');
+        if (poi) classes.push('poi');
         if (tx === x && ty === y) classes.push('active');
         else if (isAdjacent(tx, ty)) classes.push('adjacent');
-        const label = tileType === 'safe' ? 'Ville' : tileType === 'road' ? 'Route' : tileType === 'forest' ? 'Forêt' : tileType === 'water' ? 'Eau' : 'Plaine';
-        return `<button class="${classes.join(' ')}" data-x="${tx}" data-y="${ty}">${label}<br>${tx},${ty}</button>`;
+        const title = tx === x && ty === y
+          ? '🧍 Toi'
+          : poi?.name || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? '⚔ Rencontre' : (tileType === 'safe' ? 'Ville' : tileType === 'road' ? 'Route' : tileType === 'forest' ? 'Forêt' : tileType === 'water' ? 'Eau' : tileType === 'fire' ? 'Braises' : 'Plaine'));
+        const meta = tx === x && ty === y
+          ? `${character.mapId || 'Zone'} • écran ${character.screenId || '0,0'}`
+          : poi?.type || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? 'Danger' : tileType);
+        return `<button class="${classes.join(' ')}" data-x="${tx}" data-y="${ty}"><strong class="world-tile-label">${title}</strong><span class="world-tile-meta">${meta}</span></button>`;
       }).join('');
       grid.querySelectorAll('.world-tile').forEach(tile => {
         tile.addEventListener('click', () => {
@@ -1573,7 +1632,7 @@
         renderWorldGrid();
         return;
       }
-      const key = `${character.x ?? 0},${character.y ?? 0}`;
+      const key = character.screenId || STARTING_POSITION.screenId;
       const poi = WORLD_POI[key];
       const isSafeZone = SAFE_ZONE.has(key);
       const zoneHint = key === '3,3'
@@ -1591,7 +1650,7 @@
           <div class="badge-row">
             <span class="badge">Classe ${character.class}</span>
             <span class="badge">Écran ${character.screenId || '0,0'}</span>
-            <span class="badge">Case ${character.x ?? 0},${character.y ?? 0}</span>
+            <span class="badge">Case locale ${character.localX ?? 2},${character.localY ?? 2}</span>
           </div>
           <div class="hint">Tu explores un écran du monde. Les transitions donnent enfin un début de sensation MMO au lieu d’une simple grille abstraite.</div>
           <div class="badge-row">${Object.keys(screen?.exits || {}).length ? Object.keys(screen.exits).map(direction => `<span class="badge">${exitLabels[direction]}</span>`).join('') : '<span class="badge">Aucune sortie claire</span>'}</div>
@@ -1703,29 +1762,31 @@
         setMessage('worldMessage', 'Sélectionne un personnage avant de te déplacer.', 'error');
         return;
       }
-      const currentX = character.x ?? 0;
-      const currentY = character.y ?? 0;
+      const currentX = character.localX ?? 2;
+      const currentY = character.localY ?? 2;
       const distance = Math.abs(targetX - currentX) + Math.abs(targetY - currentY);
-      const targetKey = `${targetX},${targetY}`;
       if (distance !== 1) {
         setMessage('worldMessage', 'Tu peux seulement aller sur une case voisine.', 'error');
         return;
       }
-      character.x = targetX;
-      character.y = targetY;
-      character.mapId = WORLD_POI[targetKey]?.name || character.mapId || 'training-ground';
-      const positionKey = `${character.x},${character.y}`;
-      document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • position ${character.x}, ${character.y}`;
-      if (!SAFE_ZONE.has(positionKey) && WORLD_ENCOUNTERS.has(positionKey)) {
+      if (targetX < 0 || targetY < 0 || targetX >= LOCAL_SCREEN_SIZE || targetY >= LOCAL_SCREEN_SIZE) {
+        setMessage('worldMessage', 'Tu dois utiliser une sortie pour changer de map.', 'error');
+        return;
+      }
+      character.localX = targetX;
+      character.localY = targetY;
+      const positionKey = character.screenId || STARTING_POSITION.screenId;
+      document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • écran ${positionKey} • case ${character.localX}, ${character.localY}`;
+      if (!SAFE_ZONE.has(positionKey) && WORLD_ENCOUNTERS.has(positionKey) && targetX === 2 && targetY === 2) {
         const encounter = ENCOUNTER_CONFIG[positionKey];
-        setMessage('worldMessage', `Rencontre : ${encounter?.name || 'ennemi inconnu'} en ${positionKey} !`, 'ok');
+        setMessage('worldMessage', `Rencontre : ${encounter?.name || 'ennemi inconnu'} sur ${character.mapId} !`, 'ok');
         renderWorldPreview();
         switchView('combatView');
         game.setCharacter(character);
         game.startBattle(encounter);
         return;
       }
-      setMessage('worldMessage', `${character.name} se déplace en ${character.x}, ${character.y}.`, 'ok');
+      setMessage('worldMessage', `${character.name} avance sur ${character.mapId}.`, 'ok');
       renderWorldPreview();
     }
 
@@ -1734,7 +1795,7 @@
       const character = game.currentCharacter;
       document.getElementById('returnToWorldBtn').style.display = 'none';
       if (result === 'victory' && character) {
-        WORLD_ENCOUNTERS.delete(`${character.x ?? 0},${character.y ?? 0}`);
+        WORLD_ENCOUNTERS.delete(character.screenId || STARTING_POSITION.screenId);
         const rewardText = game.lastReward
           ? `Victoire. +${game.lastReward.xp} XP${game.lastReward.levelUp ? ' et niveau gagné' : ''}${game.lastReward.resources?.length ? `, butin: ${game.lastReward.resources.map(r => `+${r.qty} ${r.name}`).join(', ')}` : ''}.`
           : 'Victoire. La zone est sécurisée pour le moment.';
