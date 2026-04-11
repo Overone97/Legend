@@ -289,6 +289,8 @@
     .hud-chip { border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05); padding: 8px 10px; font-size: 12px; }
     .spell-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
     .spell-chip { min-height: 74px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, rgba(30,41,59,0.9), rgba(15,23,42,0.96)); padding: 8px; display: grid; gap: 6px; align-content: space-between; }
+    .dialog-box { position: absolute; left: 22px; right: 22px; bottom: 22px; z-index: 4; padding: 16px; border-radius: 20px; background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 18px 40px rgba(0,0,0,0.34); display: grid; gap: 10px; }
+    .dialog-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .world-scene {
       display: grid;
       gap: 12px;
@@ -488,6 +490,7 @@
             </div>
             <div class="scene-actors" id="sceneActors"></div>
             <div class="scene-exits" id="sceneExits"></div>
+            <div class="dialog-box" id="sceneDialog" style="display:none;"></div>
             <div class="scene-floor"></div>
           </div>
           <div class="world-grid" id="worldGrid"></div>
@@ -628,6 +631,45 @@
     const LOCAL_SCREEN_SIZE = 5;
 
 
+
+    const dialogState = { visible: false, title: '', body: '', actions: [] };
+
+    function openSceneDialog(title, body, actions = []) {
+      dialogState.visible = true;
+      dialogState.title = title;
+      dialogState.body = body;
+      dialogState.actions = actions;
+      renderSceneDialog();
+    }
+
+    function closeSceneDialog() {
+      dialogState.visible = false;
+      dialogState.title = '';
+      dialogState.body = '';
+      dialogState.actions = [];
+      renderSceneDialog();
+    }
+
+    function renderSceneDialog() {
+      const box = document.getElementById('sceneDialog');
+      if (!box) return;
+      if (!dialogState.visible) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+      }
+      box.style.display = 'grid';
+      box.innerHTML = `
+        <div class="hud-title"><strong>${dialogState.title}</strong><button class="ghost" id="closeSceneDialogBtn">Fermer</button></div>
+        <div>${dialogState.body}</div>
+        <div class="dialog-actions">${dialogState.actions.map((action, index) => `<button class="${action.secondary ? 'secondary' : ''}" data-dialog-action="${index}">${action.label}</button>`).join('')}</div>
+      `;
+      document.getElementById('closeSceneDialogBtn')?.addEventListener('click', closeSceneDialog);
+      box.querySelectorAll('[data-dialog-action]').forEach(button => button.addEventListener('click', () => {
+        const action = dialogState.actions[Number(button.dataset.dialogAction)];
+        if (action?.onClick) action.onClick();
+      }));
+    }
 
     const SCENE_ILLUSTRATIONS = {
       '0,0': {
@@ -1696,19 +1738,18 @@
       const character = game.currentCharacter;
       if (!character) return;
       if (payload.action === 'guide') {
-        setMessage('worldMessage', `${payload.name} te dit de suivre la Porte de l’est puis le Chemin des novices.`, 'ok');
+        openSceneDialog(payload.name, 'Prends la Porte de l’est, puis suis le Chemin des novices. Ne va pas jouer au héros trop tôt.', [{ label: 'Compris', onClick: closeSceneDialog }]);
         return;
       }
       if (payload.action === 'heal') {
-        character.hp = 100;
-        setMessage('worldMessage', `${payload.name} te remet d’aplomb avant de repartir.`, 'ok');
+        openSceneDialog(payload.name, 'Tu as l’air en vrac. Je peux te remettre d’aplomb avant que tu repartes.', [{ label: 'Me soigner', onClick: () => { character.hp = 100; setMessage('worldMessage', `${payload.name} te remet d’aplomb avant de repartir.`, 'ok'); closeSceneDialog(); } }, { label: 'Plus tard', secondary: true, onClick: closeSceneDialog }]);
         return;
       }
       if (payload.action === 'warn') {
-        setMessage('worldMessage', `${payload.name} prévient que le Bosquet trouble commence juste après.`, 'error');
+        openSceneDialog(payload.name, 'Le Bosquet trouble commence juste après. Si tu y vas trop léger, tu vas le sentir passer.', [{ label: 'Merci', onClick: closeSceneDialog }]);
         return;
       }
-      setMessage('worldMessage', `${payload.name} n’a rien de spécial à proposer pour le moment.`, 'ok');
+      openSceneDialog(payload.name, 'Rien de spécial pour le moment.', [{ label: 'Fermer', onClick: closeSceneDialog }]);
     }
 
     function inspectSceneElement(type, payload = {}) {
@@ -1717,11 +1758,11 @@
         return;
       }
       if (type === 'landmark') {
-        setMessage('worldMessage', `${payload.label} : ${payload.type}.`, 'ok');
+        openSceneDialog(payload.label, `${payload.label} est un point interactif de type ${payload.type}.`, [{ label: 'Fermer', onClick: closeSceneDialog }]);
         return;
       }
       if (type === 'player') {
-        setMessage('worldMessage', `Tu es ${payload.name}, actuellement sur ${payload.mapId}.`, 'ok');
+        openSceneDialog(payload.name, `Tu es actuellement sur ${payload.mapId}.`, [{ label: 'Fermer', onClick: closeSceneDialog }]);
         return;
       }
     }
@@ -1816,6 +1857,7 @@
       if (screen?.exits?.right) exitButtons.push('<div class="scene-exit" style="right:18px;top:50%;transform:translateY(-50%);"><button class="ghost" data-scene-exit="right">→ Est</button></div>');
       exits.innerHTML = exitButtons.join('');
       exits.querySelectorAll('[data-scene-exit]').forEach(button => button.addEventListener('click', () => moveToScreen(button.dataset.sceneExit)));
+      renderSceneDialog();
     }
 
     function renderWorldGrid() {
