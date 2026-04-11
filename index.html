@@ -680,8 +680,8 @@
           '2,3': { icon: '🚪', label: 'Porte est', type: 'Sortie' },
         },
         npcs: [
-          { name: 'Maël', role: 'Guide', hint: 'Te pousse vers la route des recrues.' },
-          { name: 'Sera', role: 'Marchande', hint: 'Tient le coin sûr de Bourg-Legend.' },
+          { name: 'Maël', role: 'Guide', hint: 'Te pousse vers la route des recrues.', action: 'guide' },
+          { name: 'Sera', role: 'Marchande', hint: 'Tient le coin sûr de Bourg-Legend.', action: 'heal' },
         ],
       },
       '1,1': {
@@ -690,7 +690,7 @@
           '2,2': { icon: '⚑', label: 'Route des recrues', type: 'Passage' },
         },
         npcs: [
-          { name: 'Rouk', role: 'Éclaireur', hint: 'Préviens que la route devient moins gentille.' },
+          { name: 'Rouk', role: 'Éclaireur', hint: 'Préviens que la route devient moins gentille.', action: 'warn' },
         ],
       },
       '2,1': {
@@ -1692,9 +1692,28 @@
 
 
 
+    function handleNpcAction(payload = {}) {
+      const character = game.currentCharacter;
+      if (!character) return;
+      if (payload.action === 'guide') {
+        setMessage('worldMessage', `${payload.name} te dit de suivre la Porte de l’est puis le Chemin des novices.`, 'ok');
+        return;
+      }
+      if (payload.action === 'heal') {
+        character.hp = 100;
+        setMessage('worldMessage', `${payload.name} te remet d’aplomb avant de repartir.`, 'ok');
+        return;
+      }
+      if (payload.action === 'warn') {
+        setMessage('worldMessage', `${payload.name} prévient que le Bosquet trouble commence juste après.`, 'error');
+        return;
+      }
+      setMessage('worldMessage', `${payload.name} n’a rien de spécial à proposer pour le moment.`, 'ok');
+    }
+
     function inspectSceneElement(type, payload = {}) {
       if (type === 'npc') {
-        setMessage('worldMessage', `${payload.name} (${payload.role}) : ${payload.hint}`, 'ok');
+        handleNpcAction(payload);
         return;
       }
       if (type === 'landmark') {
@@ -1786,10 +1805,10 @@
         actorNodes.push(`<div class="scene-actor poi" style="left:${18 + lx * 16}%;top:${28 + ly * 12}%;"><button data-scene-type="landmark" data-label="${landmark.label}" data-role="${landmark.type}"><div class="scene-sprite">${landmark.icon}</div><div class="scene-label">${landmark.label}</div></button></div>`);
       });
       (decor.npcs || []).forEach((npc, index) => {
-        actorNodes.push(`<div class="scene-actor npc" style="left:${22 + index * 18}%;top:${62 - index * 6}%;"><button data-scene-type="npc" data-name="${npc.name}" data-role="${npc.role}" data-hint="${npc.hint}"><div class="scene-sprite">🧑</div><div class="scene-label">${npc.name}</div></button></div>`);
+        actorNodes.push(`<div class="scene-actor npc" style="left:${22 + index * 18}%;top:${62 - index * 6}%;"><button data-scene-type="npc" data-name="${npc.name}" data-role="${npc.role}" data-hint="${npc.hint}" data-action="${npc.action || ''}"><div class="scene-sprite">🧑</div><div class="scene-label">${npc.name}</div></button></div>`);
       });
       actors.innerHTML = actorNodes.join('');
-      actors.querySelectorAll('[data-scene-type]').forEach(node => node.addEventListener('click', () => inspectSceneElement(node.dataset.sceneType, { name: node.dataset.name, mapId: node.dataset.map, label: node.dataset.label, role: node.dataset.role, hint: node.dataset.hint, type: node.dataset.role })));
+      actors.querySelectorAll('[data-scene-type]').forEach(node => node.addEventListener('click', () => inspectSceneElement(node.dataset.sceneType, { name: node.dataset.name, mapId: node.dataset.map, label: node.dataset.label, role: node.dataset.role, hint: node.dataset.hint, type: node.dataset.role, action: node.dataset.action })));
       const exitButtons = [];
       if (screen?.exits?.up) exitButtons.push('<div class="scene-exit" style="top:18px;left:50%;transform:translateX(-50%);"><button class="ghost" data-scene-exit="up">↑ Nord</button></div>');
       if (screen?.exits?.down) exitButtons.push('<div class="scene-exit" style="bottom:18px;left:50%;transform:translateX(-50%);"><button class="ghost" data-scene-exit="down">↓ Sud</button></div>');
