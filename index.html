@@ -484,7 +484,7 @@
       '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, resistances: { terre: 15, feu: -5 }, resources: [{ key: 'griffe_noire', name: 'Griffe noire', qty: 1 }, { key: 'peau_rapee', name: 'Peau râpée', qty: 2 }], color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, element: 'terre', description: 'Une frappe violente pour les zones dangereuses.' } },
       '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, resistances: { air: 10 }, resources: [{ key: 'fer_use', name: 'Fer usé', qty: 2 }, { key: 'plume_rapide', name: 'Plume rapide', qty: 1 }], color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, element: 'air', description: 'Un projectile rapide qui punit les distances mal gérées.' } },
       '4,1': { name: 'Ondine des rives', hp: 88, ap: 6, mp: 4, speed: 9, xp: 24, resistances: { eau: 20, feu: -10 }, resources: [{ key: 'perle_froide', name: 'Perle froide', qty: 1 }], color: '#0ea5e9', skill: { name: 'Jet d’écume', costAP: 4, range: 3, damage: 20, element: 'eau', description: 'Une attaque d’eau vive qui use à distance.' } },
-      '6,3': { name: 'Cendrelame', hp: 105, ap: 7, mp: 3, speed: 10, xp: 32, resistances: { feu: 20, eau: -10 }, resources: [{ key: 'braise_tiede', name: 'Braise tiède', qty: 2 }], color: '#dc2626', skill: { name: 'Lame ardente', costAP: 5, range: 2, damage: 24, element: 'feu', description: 'Une coupe embrasée qui annonce des ennemis plus agressifs.' } },
+      '6,3': { name: 'Cendrelame', hp: 100, ap: 7, mp: 3, speed: 10, xp: 30, resistances: { feu: 18, eau: -10 }, resources: [{ key: 'braise_tiede', name: 'Braise tiède', qty: 2 }], color: '#dc2626', skill: { name: 'Lame ardente', costAP: 5, range: 2, damage: 24, element: 'feu', description: 'Une coupe embrasée qui annonce des ennemis plus agressifs.' } },
     };
 
     const CRAFT_RECIPES = [
@@ -1276,8 +1276,12 @@
           <span class="badge">PV bonus ${combatBonuses.maxHp || 0}</span>
           <span class="badge">Dégâts bonus ${combatBonuses.bonusDamage || 0}</span>
           <span class="badge">PM bonus ${combatBonuses.mp || 0}</span>
+          <span class="badge">Terre ${combatBonuses.terre || 0}%</span>
+          <span class="badge">Feu ${combatBonuses.feu || 0}%</span>
+          <span class="badge">Eau ${combatBonuses.eau || 0}%</span>
+          <span class="badge">Air ${combatBonuses.air || 0}%</span>
         </div>
-        <div class="hint">Les caractéristiques seront branchées au combat juste après.</div>
+        <div class="hint">Lisibilité renforcée pour mieux comprendre les builds et l’équilibrage élémentaire.</div>
       `;
       allocator.innerHTML = `
         <h4>Distribuer les points</h4>
@@ -1313,12 +1317,13 @@
             <strong>${recipe.name}</strong><br>
             <small>${recipe.costs.map(cost => `${cost.qty} ${cost.key.replaceAll('_', ' ')}`).join(' • ')}</small><br>
             <small>Possédé: ${owned}</small><br>
+            <small>Set: ${recipe.reward.set || 'aucun'} • Résistances: ${Object.entries(recipe.reward.resistances || {}).map(([k,v]) => `${k}+${v}%`).join(', ') || 'aucune'}</small><br>
             <button class="secondary" data-recipe="${recipe.key}" ${canCraft ? '' : 'disabled'}>Fabriquer</button>
             <button class="ghost" data-equip="${recipe.key}" ${owned > 0 ? '' : 'disabled'}>Équiper</button>
           </div>
         `;
       }).join('');
-      preview.innerHTML = '<div class="hint">Fabrique des objets orientés par élément pour commencer à construire de vrais builds terre, feu, eau ou air.</div>';
+      preview.innerHTML = '<div class="hint">Fabrique des objets orientés par élément pour construire de vrais builds terre, feu, eau ou air. Vérifie bien les résistances et bonus avant d’équiper.</div>';
       list.querySelectorAll('[data-recipe]').forEach(button => {
         button.addEventListener('click', () => craftRecipe(button.dataset.recipe));
       });
