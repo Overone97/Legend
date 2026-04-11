@@ -186,6 +186,34 @@
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 18px 40px rgba(0,0,0,0.24);
     }
     .class-grid, .hud-grid, .section, .bar-group, .log { display: grid; gap: 10px; }
+    .scene-stage { display: grid; gap: 14px; }
+    .scene-canvas {
+      min-height: 620px;
+      border-radius: 26px;
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+      position: relative;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(15,23,42,0.08));
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), 0 20px 50px rgba(0,0,0,0.28);
+    }
+    .scene-backdrop {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center; filter: saturate(1.05);
+    }
+    .scene-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,23,42,0.1), rgba(15,23,42,0.35)); }
+    .scene-titlebar { position: absolute; top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: start; gap: 12px; z-index: 2; }
+    .scene-titlecard, .scene-hudcard { background: rgba(15,23,42,0.66); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 14px; backdrop-filter: blur(8px); }
+    .scene-actors { position: absolute; inset: 0; z-index: 2; }
+    .scene-actor { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 6px; }
+    .scene-sprite { width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center; font-size: 28px; background: rgba(15,23,42,0.78); border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 10px 24px rgba(0,0,0,0.28); }
+    .scene-actor.player .scene-sprite { background: rgba(20,83,45,0.88); border-color: rgba(110,231,183,0.5); }
+    .scene-actor.npc .scene-sprite { background: rgba(88,28,135,0.82); }
+    .scene-actor.poi .scene-sprite { background: rgba(120,53,15,0.82); }
+    .scene-label { font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 999px; background: rgba(15,23,42,0.82); border: 1px solid rgba(255,255,255,0.08); }
+    .scene-exits { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+    .scene-exit { position: absolute; pointer-events: auto; }
+    .scene-exit button { background: rgba(15,23,42,0.75); border: 1px solid rgba(255,255,255,0.12); }
+    .scene-floor { position: absolute; left: 0; right: 0; bottom: 0; height: 42%; background: linear-gradient(180deg, rgba(15,23,42,0), rgba(15,23,42,0.18) 15%, rgba(15,23,42,0.52)); z-index: 1; }
     .world-grid {
       display: grid;
       grid-template-columns: repeat(10, 1fr);
@@ -295,7 +323,7 @@
     .turn-banner { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
 
     @media (max-width: 1080px) {
-      .landing, .characters-wrap, .app { grid-template-columns: 1fr; }
+      .landing, .characters-wrap, .app, .game-layout { grid-template-columns: 1fr; }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -436,18 +464,27 @@
     </div>
 
     <div class="view" id="worldView">
-      <div class="characters-wrap">
-        <div class="panel create-card">
-          <h3>Zone d'exploration</h3>
-          <p class="hint">Déplace-toi sur l’écran courant, puis passe de map en map avec les sorties, comme dans un monde découpé.</p>
+      <div class="game-layout">
+        <div class="panel scene-stage">
           <div class="message" id="worldMessage"></div>
-          <div class="badge-row" id="screenExitButtons"></div>
+          <div class="scene-canvas" id="sceneCanvas">
+            <div class="scene-backdrop" id="sceneBackdrop"></div>
+            <div class="scene-overlay"></div>
+            <div class="scene-titlebar">
+              <div class="scene-titlecard" id="worldPreview"></div>
+              <div class="scene-hudcard" id="screenExitButtons"></div>
+            </div>
+            <div class="scene-actors" id="sceneActors"></div>
+            <div class="scene-exits" id="sceneExits"></div>
+            <div class="scene-floor"></div>
+          </div>
           <div class="world-grid" id="worldGrid"></div>
         </div>
         <div class="panel create-card">
-          <h3>Position actuelle</h3>
-          <div class="class-preview" id="worldPreview"></div>
+          <h3>Interface de jeu</h3>
           <div class="class-preview" id="poiPreview"></div>
+          <div class="class-preview" id="inventoryPreview"></div>
+          <div class="class-preview" id="equipmentPreview"></div>
         </div>
       </div>
     </div>
@@ -579,6 +616,16 @@
     };
 
     const LOCAL_SCREEN_SIZE = 5;
+
+
+    const SCENE_BACKDROPS = {
+      safe: 'linear-gradient(135deg, rgba(214,228,202,0.95), rgba(123,160,114,0.88) 45%, rgba(67,94,61,0.92))',
+      road: 'linear-gradient(135deg, rgba(195,188,164,0.95), rgba(122,109,86,0.9) 45%, rgba(74,63,52,0.95))',
+      forest: 'linear-gradient(135deg, rgba(67,99,71,0.95), rgba(29,78,52,0.92) 45%, rgba(21,37,29,0.96))',
+      water: 'linear-gradient(135deg, rgba(111,179,224,0.95), rgba(29,78,216,0.9) 45%, rgba(15,23,42,0.96))',
+      plains: 'linear-gradient(135deg, rgba(188,212,106,0.95), rgba(101,163,13,0.9) 45%, rgba(63,98,18,0.96))',
+      fire: 'linear-gradient(135deg, rgba(248,113,113,0.95), rgba(185,28,28,0.9) 45%, rgba(69,10,10,0.96))',
+    };
 
     const SCREEN_DECOR = {
       '0,0': {
@@ -1597,6 +1644,42 @@
       renderWorldPreview();
     }
 
+
+    function renderMainScene() {
+      const character = game.currentCharacter;
+      const backdrop = document.getElementById('sceneBackdrop');
+      const actors = document.getElementById('sceneActors');
+      const exits = document.getElementById('sceneExits');
+      if (!character) {
+        backdrop.style.background = SCENE_BACKDROPS.safe;
+        actors.innerHTML = '<div class="scene-actor player" style="left:50%;top:60%;"><div class="scene-sprite">🧍</div><div class="scene-label">Choisis un personnage</div></div>';
+        exits.innerHTML = '';
+        return;
+      }
+      const screen = WORLD_SCREENS[character.screenId || STARTING_POSITION.screenId] || WORLD_SCREENS[STARTING_POSITION.screenId];
+      const biome = screen?.biome || 'safe';
+      backdrop.style.background = SCENE_BACKDROPS[biome] || SCENE_BACKDROPS.safe;
+      const decor = SCREEN_DECOR[character.screenId || STARTING_POSITION.screenId] || { landmarks: {}, npcs: [] };
+      const playerLeft = 18 + ((character.localX ?? 2) * 16);
+      const playerTop = 28 + ((character.localY ?? 2) * 12);
+      const actorNodes = [`<div class="scene-actor player" style="left:${playerLeft}%;top:${playerTop}%;"><div class="scene-sprite">🧍</div><div class="scene-label">${character.name}</div></div>`];
+      Object.entries(decor.landmarks || {}).forEach(([pos, landmark]) => {
+        const [lx, ly] = pos.split(',').map(Number);
+        actorNodes.push(`<div class="scene-actor poi" style="left:${18 + lx * 16}%;top:${28 + ly * 12}%;"><div class="scene-sprite">${landmark.icon}</div><div class="scene-label">${landmark.label}</div></div>`);
+      });
+      (decor.npcs || []).forEach((npc, index) => {
+        actorNodes.push(`<div class="scene-actor npc" style="left:${22 + index * 18}%;top:${62 - index * 6}%;"><div class="scene-sprite">🧑</div><div class="scene-label">${npc.name}</div></div>`);
+      });
+      actors.innerHTML = actorNodes.join('');
+      const exitButtons = [];
+      if (screen?.exits?.up) exitButtons.push('<div class="scene-exit" style="top:18px;left:50%;transform:translateX(-50%);"><button class="ghost" data-scene-exit="up">↑ Nord</button></div>');
+      if (screen?.exits?.down) exitButtons.push('<div class="scene-exit" style="bottom:18px;left:50%;transform:translateX(-50%);"><button class="ghost" data-scene-exit="down">↓ Sud</button></div>');
+      if (screen?.exits?.left) exitButtons.push('<div class="scene-exit" style="left:18px;top:50%;transform:translateY(-50%);"><button class="ghost" data-scene-exit="left">← Ouest</button></div>');
+      if (screen?.exits?.right) exitButtons.push('<div class="scene-exit" style="right:18px;top:50%;transform:translateY(-50%);"><button class="ghost" data-scene-exit="right">→ Est</button></div>');
+      exits.innerHTML = exitButtons.join('');
+      exits.querySelectorAll('[data-scene-exit]').forEach(button => button.addEventListener('click', () => moveToScreen(button.dataset.sceneExit)));
+    }
+
     function renderWorldGrid() {
       const grid = document.getElementById('worldGrid');
       const exits = document.getElementById('screenExitButtons');
@@ -1663,6 +1746,7 @@
       if (!character) {
         preview.innerHTML = '<div class="hint">Sélectionne un personnage pour explorer la carte.</div>';
         poiPreview.innerHTML = '<div class="hint">Les points d’intérêt du monde apparaîtront ici.</div>';
+        renderMainScene();
         renderWorldGrid();
         return;
       }
@@ -1679,16 +1763,14 @@
       const screen = WORLD_SCREENS[character.screenId || STARTING_POSITION.screenId];
       const exitLabels = { up: '↑ Nord', down: '↓ Sud', left: '← Ouest', right: '→ Est' };
       preview.innerHTML = `
-        <div class="world-scene">
-          <h4>${screen?.name || character.mapId || 'Zone inconnue'}</h4>
-          <div class="badge-row">
-            <span class="badge">Classe ${character.class}</span>
-            <span class="badge">Écran ${character.screenId || '0,0'}</span>
-            <span class="badge">Case locale ${character.localX ?? 2},${character.localY ?? 2}</span>
-          </div>
-          <div class="hint">Tu explores un écran du monde. Les transitions donnent enfin un début de sensation MMO au lieu d’une simple grille abstraite.</div>
-          <div class="badge-row">${Object.keys(screen?.exits || {}).length ? Object.keys(screen.exits).map(direction => `<span class="badge">${exitLabels[direction]}</span>`).join('') : '<span class="badge">Aucune sortie claire</span>'}</div>
+        <h4>${screen?.name || character.mapId || 'Zone inconnue'}</h4>
+        <div class="badge-row">
+          <span class="badge">Classe ${character.class}</span>
+          <span class="badge">Écran ${character.screenId || '0,0'}</span>
+          <span class="badge">Case locale ${character.localX ?? 2},${character.localY ?? 2}</span>
         </div>
+        <div class="hint">Scène principale du jeu, avec HUD latéral et transitions intégrées.</div>
+        <div class="badge-row">${Object.keys(screen?.exits || {}).length ? Object.keys(screen.exits).map(direction => `<span class="badge">${exitLabels[direction]}</span>`).join('') : '<span class="badge">Aucune sortie claire</span>'}</div>
       `;
       const npcs = SCREEN_DECOR[key]?.npcs || [];
       poiPreview.innerHTML = `
@@ -1702,6 +1784,7 @@
       } else if (zoneHint) {
         setMessage('worldMessage', zoneHint, key === '4,5' ? 'error' : 'ok');
       }
+      renderMainScene();
       renderWorldGrid();
     }
 
