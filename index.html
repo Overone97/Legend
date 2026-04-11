@@ -491,6 +491,8 @@
       { key: 'amulette_bois', name: 'Amulette en bois sombre', costs: [{ key: 'bois_sombre', qty: 2 }], reward: { key: 'amulette_bois', name: 'Amulette en bois sombre', qty: 1, slot: 'amulette', set: 'forestier', resistances: { terre: 5 } } },
       { key: 'dagues_usees', name: 'Dagues usées', costs: [{ key: 'fer_use', qty: 2 }], reward: { key: 'dagues_usees', name: 'Dagues usées', qty: 1, slot: 'arme', set: 'roadrunner', resistances: { air: 5 } } },
       { key: 'cape_rapee', name: 'Cape râpée', costs: [{ key: 'peau_rapee', qty: 2 }, { key: 'griffe_noire', qty: 1 }], reward: { key: 'cape_rapee', name: 'Cape râpée', qty: 1, slot: 'cape', set: 'forestier', resistances: { feu: 5 } } },
+      { key: 'talisman_ecume', name: 'Talisman d’écume', costs: [{ key: 'perle_froide', qty: 1 }, { key: 'bois_sombre', qty: 1 }], reward: { key: 'talisman_ecume', name: 'Talisman d’écume', qty: 1, slot: 'amulette', set: 'maree', resistances: { eau: 8 } } },
+      { key: 'lame_braise', name: 'Lame de braise', costs: [{ key: 'braise_tiede', qty: 2 }, { key: 'fer_use', qty: 1 }], reward: { key: 'lame_braise', name: 'Lame de braise', qty: 1, slot: 'arme', set: 'brasier', resistances: { feu: 8 } } },
     ];
 
     const SET_BONUSES = {
@@ -504,6 +506,18 @@
         name: 'Panoplie du rôdeur',
         bonuses: {
           1: { label: '+1 PM et +5% air', stats: { mp: 1, air: 5 } },
+        },
+      },
+      maree: {
+        name: 'Panoplie des marées',
+        bonuses: {
+          1: { label: '+8% eau et +5 sagesse narrative', stats: { eau: 8 } },
+        },
+      },
+      brasier: {
+        name: 'Panoplie du brasier',
+        bonuses: {
+          1: { label: '+8% feu et +5 dégâts ressentis', stats: { feu: 8, bonusDamage: 5 } },
         },
       },
     };
@@ -1289,7 +1303,7 @@
           </div>
         `;
       }).join('');
-      preview.innerHTML = '<div class="hint">Fabrique tes premiers objets pour poser les bases des futures panoplies.</div>';
+      preview.innerHTML = '<div class="hint">Fabrique des objets orientés par élément pour commencer à construire de vrais builds terre, feu, eau ou air.</div>';
       list.querySelectorAll('[data-recipe]').forEach(button => {
         button.addEventListener('click', () => craftRecipe(button.dataset.recipe));
       });
