@@ -279,6 +279,15 @@
     .world-tile-mark { font-size: 20px; line-height: 1; }
     .npc-list { display: grid; gap: 10px; }
     .npc-card { padding: 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); }
+    .hud-panel { display: grid; gap: 14px; }
+    .hud-card { padding: 14px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.08); background: rgba(15,23,42,0.72); display: grid; gap: 12px; }
+    .hud-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .hud-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .hud-slot { min-height: 72px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); display: grid; place-items: center; text-align: center; font-size: 12px; padding: 8px; }
+    .hud-resources { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .hud-chip { border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05); padding: 8px 10px; font-size: 12px; }
+    .spell-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .spell-chip { min-height: 74px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, rgba(30,41,59,0.9), rgba(15,23,42,0.96)); padding: 8px; display: grid; gap: 6px; align-content: space-between; }
     .world-scene {
       display: grid;
       gap: 12px;
@@ -484,9 +493,7 @@
         </div>
         <div class="panel create-card">
           <h3>Interface de jeu</h3>
-          <div class="class-preview" id="poiPreview"></div>
-          <div class="class-preview" id="inventoryPreview"></div>
-          <div class="class-preview" id="equipmentPreview"></div>
+          <div class="hud-panel" id="gameHudPanel"></div>
         </div>
       </div>
     </div>
@@ -1682,6 +1689,60 @@
     }
 
 
+
+    function renderGameHud() {
+      const panel = document.getElementById('gameHudPanel');
+      const character = game.currentCharacter;
+      if (!character) {
+        panel.innerHTML = '<div class="hud-card"><div class="hint">Choisis un personnage pour afficher le HUD.</div></div>';
+        return;
+      }
+      const equipment = character.equipment || { arme: null, amulette: null, cape: null };
+      const inventoryEntries = Object.entries(character.inventory || {}).filter(([, qty]) => qty > 0).slice(0, 6);
+      const attrs = character.attributes || {};
+      const classData = CLASSES[character.class] || CLASSES.warrior;
+      panel.innerHTML = `
+        <div class="hud-card">
+          <div class="hud-title"><strong>${character.name}</strong><span class="badge">Niv. ${character.level || 1}</span></div>
+          <div class="badge-row">
+            <span class="badge">${classData.name}</span>
+            <span class="badge">XP ${character.xp || 0}</span>
+            <span class="badge">PA ${classData.stats.ap}</span>
+            <span class="badge">PM ${classData.stats.mp}</span>
+          </div>
+          <div class="hud-resources">
+            <div class="hud-chip">❤️ Vitalité ${attrs.vitalite || 0}</div>
+            <div class="hud-chip">🧠 Sagesse ${attrs.sagesse || 0}</div>
+            <div class="hud-chip">🪨 Force ${attrs.force || 0}</div>
+            <div class="hud-chip">🔥 Intel ${attrs.intelligence || 0}</div>
+            <div class="hud-chip">💧 Chance ${attrs.chance || 0}</div>
+            <div class="hud-chip">🌪 Agilité ${attrs.agilite || 0}</div>
+          </div>
+        </div>
+        <div class="hud-card">
+          <div class="hud-title"><strong>Équipement</strong><span class="badge">3 slots</span></div>
+          <div class="hud-slots">
+            <div class="hud-slot">⚔️<br>${equipment.arme || 'Arme vide'}</div>
+            <div class="hud-slot">📿<br>${equipment.amulette || 'Amulette vide'}</div>
+            <div class="hud-slot">🧥<br>${equipment.cape || 'Cape vide'}</div>
+          </div>
+        </div>
+        <div class="hud-card">
+          <div class="hud-title"><strong>Sorts</strong><span class="badge">Barre rapide</span></div>
+          <div class="spell-bar">
+            <div class="spell-chip"><strong>1</strong><span>${classData.skill.name}</span><span class="hint">${classData.skill.element}</span></div>
+            <div class="spell-chip"><strong>2</strong><span>À venir</span><span class="hint">sort</span></div>
+            <div class="spell-chip"><strong>3</strong><span>À venir</span><span class="hint">sort</span></div>
+            <div class="spell-chip"><strong>4</strong><span>À venir</span><span class="hint">sort</span></div>
+          </div>
+        </div>
+        <div class="hud-card">
+          <div class="hud-title"><strong>Sac</strong><span class="badge">${inventoryEntries.length} ressources</span></div>
+          <div class="hud-resources">${inventoryEntries.length ? inventoryEntries.map(([key, qty]) => `<div class="hud-chip">${key}<br>x${qty}</div>`).join('') : '<div class="hint">Sac encore léger.</div>'}</div>
+        </div>
+      `;
+    }
+
     function renderMainScene() {
       const character = game.currentCharacter;
       const backdrop = document.getElementById('sceneBackdrop');
@@ -1781,12 +1842,11 @@
 
     function renderWorldPreview() {
       const preview = document.getElementById('worldPreview');
-      const poiPreview = document.getElementById('poiPreview');
       const character = game.currentCharacter;
       if (!character) {
         preview.innerHTML = '<div class="hint">Sélectionne un personnage pour explorer la carte.</div>';
-        poiPreview.innerHTML = '<div class="hint">Les points d’intérêt du monde apparaîtront ici.</div>';
         renderMainScene();
+        renderGameHud();
         renderWorldGrid();
         return;
       }
@@ -1812,19 +1872,13 @@
         <div class="hint">Scène principale du jeu, avec HUD latéral et transitions intégrées.</div>
         <div class="badge-row">${Object.keys(screen?.exits || {}).length ? Object.keys(screen.exits).map(direction => `<span class="badge">${exitLabels[direction]}</span>`).join('') : '<span class="badge">Aucune sortie claire</span>'}</div>
       `;
-      const npcs = SCREEN_DECOR[key]?.npcs || [];
-      poiPreview.innerHTML = `
-        <div class="world-scene">
-          ${poi ? `<h4>${poi.name}</h4><div class="badge-row"><span class="badge">${poi.type}</span>${isSafeZone ? '<span class="badge">Zone sûre</span>' : ''}${WORLD_ENCOUNTERS.has(key) ? '<span class="badge">Rencontre possible</span>' : ''}</div><div class="hint">${poi.description}</div>` : `<h4>${isSafeZone ? 'Zone protégée' : 'Terrain ouvert'}</h4><div class="hint">${isSafeZone ? 'Tu restes dans l’ombre rassurante de Bourg-Legend.' : 'Pas de point d’intérêt ici, mais l’ambiance du biome commence à raconter quelque chose.'}</div>`}
-          <div class="npc-list">${npcs.length ? npcs.map(npc => `<div class="npc-card"><strong>${npc.name}</strong><div class="badge-row"><span class="badge">${npc.role}</span></div><div class="hint">${npc.hint}</div></div>`).join('') : '<div class="hint">Aucun PNJ notable sur cet écran pour l’instant.</div>'}</div>
-        </div>
-      `;
       if (key === '0,0') {
         setMessage('worldMessage', 'Tu es à Bourg-Legend. Suis la route vers l’est pour quitter la ville.', 'ok');
       } else if (zoneHint) {
         setMessage('worldMessage', zoneHint, key === '4,5' ? 'error' : 'ok');
       }
       renderMainScene();
+      renderGameHud();
       renderWorldGrid();
     }
 
