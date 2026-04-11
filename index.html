@@ -190,38 +190,83 @@
       display: grid;
       grid-template-columns: repeat(10, 1fr);
       gap: 8px;
+      padding: 14px;
+      border-radius: 22px;
+      background: radial-gradient(circle at top, rgba(255,255,255,0.08), rgba(15,23,42,0.2));
+      border: 1px solid rgba(255,255,255,0.08);
+      min-height: 420px;
     }
     .world-tile {
       aspect-ratio: 1;
-      border-radius: 12px;
+      border-radius: 16px;
       border: 1px solid rgba(255,255,255,0.08);
-      background: #1c2240;
       color: var(--text);
       font-weight: 700;
       cursor: pointer;
       display: grid;
-      place-items: center;
-      font-size: 12px;
-      text-align: center;
-      padding: 4px;
+      align-content: space-between;
+      justify-items: start;
+      font-size: 11px;
+      text-align: left;
+      padding: 8px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
     }
+    .world-tile:hover { transform: translateY(-2px); }
+    .world-tile::after {
+      content: '';
+      position: absolute;
+      inset: auto -10% -35% -10%;
+      height: 60%;
+      background: rgba(255,255,255,0.08);
+      filter: blur(20px);
+      opacity: 0.4;
+    }
+    .world-tile strong, .world-tile span { position: relative; z-index: 1; }
     .world-tile.active {
-      border-color: rgba(94,234,212,0.9);
-      box-shadow: 0 0 0 1px rgba(94,234,212,0.35) inset;
-      background: #134e4a;
+      border-color: rgba(94,234,212,0.95);
+      box-shadow: 0 0 0 1px rgba(94,234,212,0.35) inset, 0 12px 30px rgba(45,212,191,0.18);
     }
     .world-tile.adjacent {
-      background: #1e3a5f;
+      box-shadow: 0 0 0 1px rgba(147,197,253,0.18) inset;
     }
     .world-tile.encounter {
-      background: #4c1d1d;
-      border-color: rgba(248,113,113,0.4);
+      border-color: rgba(248,113,113,0.55);
+      box-shadow: 0 0 0 1px rgba(248,113,113,0.15) inset;
     }
-    .world-tile.plains { background: #365314; }
-    .world-tile.forest { background: #14532d; }
-    .world-tile.road { background: #57534e; }
-    .world-tile.water { background: #1d4ed8; }
-    .world-tile.safe { background: #0f766e; }
+    .world-tile.poi {
+      border-color: rgba(250,204,21,0.45);
+    }
+    .world-tile.plains { background: linear-gradient(180deg, #4d7c0f, #365314); }
+    .world-tile.forest { background: linear-gradient(180deg, #166534, #14532d); }
+    .world-tile.road { background: linear-gradient(180deg, #78716c, #57534e); }
+    .world-tile.water { background: linear-gradient(180deg, #2563eb, #1d4ed8); }
+    .world-tile.safe { background: linear-gradient(180deg, #0f766e, #115e59); }
+    .world-tile.fire { background: linear-gradient(180deg, #dc2626, #7f1d1d); }
+    .world-tile-label { font-size: 14px; }
+    .world-tile-meta { font-size: 10px; opacity: 0.88; }
+    .world-scene {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(15,23,42,0.18));
+    }
+    .screen-nav {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      align-items: center;
+    }
+    .screen-nav .ghost {
+      min-height: 42px;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .screen-nav-spacer { visibility: hidden; }
     .section h3 { font-size: 13px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; margin: 0; }
     .class-card {
       border: 1px solid rgba(255,255,255,0.08);
@@ -1480,7 +1525,19 @@
         return;
       }
       const screen = WORLD_SCREENS[character.screenId || STARTING_POSITION.screenId] || WORLD_SCREENS[STARTING_POSITION.screenId];
-      exits.innerHTML = ['up','down','left','right'].map(direction => `<button class="ghost" data-exit="${direction}" ${screen?.exits?.[direction] ? '' : 'disabled'}>${direction}</button>`).join('');
+      const exitLabels = { up: '↑ Nord', down: '↓ Sud', left: '← Ouest', right: '→ Est' };
+      exits.className = 'screen-nav';
+      exits.innerHTML = `
+        <span class="screen-nav-spacer"></span>
+        <button class="ghost" data-exit="up" ${screen?.exits?.up ? '' : 'disabled'}>${exitLabels.up}</button>
+        <span class="screen-nav-spacer"></span>
+        <button class="ghost" data-exit="left" ${screen?.exits?.left ? '' : 'disabled'}>${exitLabels.left}</button>
+        <span class="badge">${screen?.name || 'Écran'}</span>
+        <button class="ghost" data-exit="right" ${screen?.exits?.right ? '' : 'disabled'}>${exitLabels.right}</button>
+        <span class="screen-nav-spacer"></span>
+        <button class="ghost" data-exit="down" ${screen?.exits?.down ? '' : 'disabled'}>${exitLabels.down}</button>
+        <span class="screen-nav-spacer"></span>
+      `;
       exits.querySelectorAll('[data-exit]').forEach(button => button.addEventListener('click', () => moveToScreen(button.dataset.exit)));
       const x = character.x ?? 0;
       const y = character.y ?? 0;
@@ -1526,19 +1583,23 @@
           : key === '4,5'
             ? 'Zone franchement dangereuse. Mieux vaut être prêt.'
             : '';
+      const screen = WORLD_SCREENS[character.screenId || STARTING_POSITION.screenId];
+      const exitLabels = { up: '↑ Nord', down: '↓ Sud', left: '← Ouest', right: '→ Est' };
       preview.innerHTML = `
-        <h4>${character.name}</h4>
-        <div class="badge-row">
-          <span class="badge">Classe ${character.class}</span>
-          <span class="badge">Zone ${character.mapId || 'training-ground'}</span>
-          <span class="badge">X ${character.x ?? 0}</span>
-          <span class="badge">Y ${character.y ?? 0}</span>
+        <div class="world-scene">
+          <h4>${screen?.name || character.mapId || 'Zone inconnue'}</h4>
+          <div class="badge-row">
+            <span class="badge">Classe ${character.class}</span>
+            <span class="badge">Écran ${character.screenId || '0,0'}</span>
+            <span class="badge">Case ${character.x ?? 0},${character.y ?? 0}</span>
+          </div>
+          <div class="hint">Tu explores un écran du monde. Les transitions donnent enfin un début de sensation MMO au lieu d’une simple grille abstraite.</div>
+          <div class="badge-row">${Object.keys(screen?.exits || {}).length ? Object.keys(screen.exits).map(direction => `<span class="badge">${exitLabels[direction]}</span>`).join('') : '<span class="badge">Aucune sortie claire</span>'}</div>
         </div>
-        <div class="hint">Carte prototype avec biomes lisibles. Les cases rouges déclenchent une rencontre, sauf en zone sûre.</div>
       `;
       poiPreview.innerHTML = poi
-        ? `<h4>${poi.name}</h4><div class="badge-row"><span class="badge">${poi.type}</span>${isSafeZone ? '<span class="badge">Zone sûre</span>' : ''}</div><div class="hint">${poi.description}</div>`
-        : `<div class="hint">${isSafeZone ? 'Zone sûre autour de Bourg-Legend.' : 'Aucun point d’intérêt notable sur cette case.'}</div>`;
+        ? `<div class="world-scene"><h4>${poi.name}</h4><div class="badge-row"><span class="badge">${poi.type}</span>${isSafeZone ? '<span class="badge">Zone sûre</span>' : ''}${WORLD_ENCOUNTERS.has(key) ? '<span class="badge">Rencontre possible</span>' : ''}</div><div class="hint">${poi.description}</div></div>`
+        : `<div class="world-scene"><h4>${isSafeZone ? 'Zone protégée' : 'Terrain ouvert'}</h4><div class="hint">${isSafeZone ? 'Tu restes dans l’ombre rassurante de Bourg-Legend.' : 'Pas de point d’intérêt ici, mais l’ambiance du biome commence à raconter quelque chose.'}</div></div>`;
       if (key === '0,0') {
         setMessage('worldMessage', 'Tu es à Bourg-Legend. Suis la route vers l’est pour quitter la ville.', 'ok');
       } else if (zoneHint) {
