@@ -480,9 +480,9 @@
       '4,5': 'forest', '5,5': 'plains', '6,5': 'road', '7,5': 'road'
     };
     const ENCOUNTER_CONFIG = {
-      '2,2': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, xp: 18, resistances: { terre: 10 }, resources: [{ key: 'bois_sombre', name: 'Bois sombre', qty: 2 }], color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, element: 'terre', description: 'Une attaque sale mais encore gérable.' } },
+      '2,2': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, xp: 18, resistances: { terre: 10 }, resources: [{ key: 'bois_sombre', name: 'Bois sombre', qty: 2 }, { key: 'ecorce_lourde', name: 'Écorce lourde', qty: 1 }], color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, element: 'terre', description: 'Une attaque sale mais encore gérable.' } },
       '4,5': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, resistances: { terre: 15, feu: -5 }, resources: [{ key: 'griffe_noire', name: 'Griffe noire', qty: 1 }, { key: 'peau_rapee', name: 'Peau râpée', qty: 2 }], color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, element: 'terre', description: 'Une frappe violente pour les zones dangereuses.' } },
-      '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, resistances: { air: 10 }, resources: [{ key: 'fer_use', name: 'Fer usé', qty: 2 }], color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, element: 'air', description: 'Un projectile rapide qui punit les distances mal gérées.' } },
+      '7,3': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, resistances: { air: 10 }, resources: [{ key: 'fer_use', name: 'Fer usé', qty: 2 }, { key: 'plume_rapide', name: 'Plume rapide', qty: 1 }], color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, element: 'air', description: 'Un projectile rapide qui punit les distances mal gérées.' } },
       '4,1': { name: 'Ondine des rives', hp: 88, ap: 6, mp: 4, speed: 9, xp: 24, resistances: { eau: 20, feu: -10 }, resources: [{ key: 'perle_froide', name: 'Perle froide', qty: 1 }], color: '#0ea5e9', skill: { name: 'Jet d’écume', costAP: 4, range: 3, damage: 20, element: 'eau', description: 'Une attaque d’eau vive qui use à distance.' } },
       '6,3': { name: 'Cendrelame', hp: 105, ap: 7, mp: 3, speed: 10, xp: 32, resistances: { feu: 20, eau: -10 }, resources: [{ key: 'braise_tiede', name: 'Braise tiède', qty: 2 }], color: '#dc2626', skill: { name: 'Lame ardente', costAP: 5, range: 2, damage: 24, element: 'feu', description: 'Une coupe embrasée qui annonce des ennemis plus agressifs.' } },
     };
@@ -493,6 +493,8 @@
       { key: 'cape_rapee', name: 'Cape râpée', costs: [{ key: 'peau_rapee', qty: 2 }, { key: 'griffe_noire', qty: 1 }], reward: { key: 'cape_rapee', name: 'Cape râpée', qty: 1, slot: 'cape', set: 'forestier', resistances: { feu: 5 } } },
       { key: 'talisman_ecume', name: 'Talisman d’écume', costs: [{ key: 'perle_froide', qty: 1 }, { key: 'bois_sombre', qty: 1 }], reward: { key: 'talisman_ecume', name: 'Talisman d’écume', qty: 1, slot: 'amulette', set: 'maree', resistances: { eau: 8 } } },
       { key: 'lame_braise', name: 'Lame de braise', costs: [{ key: 'braise_tiede', qty: 2 }, { key: 'fer_use', qty: 1 }], reward: { key: 'lame_braise', name: 'Lame de braise', qty: 1, slot: 'arme', set: 'brasier', resistances: { feu: 8 } } },
+      { key: 'ceinture_terre', name: 'Ceinture tellurique', costs: [{ key: 'ecorce_lourde', qty: 1 }, { key: 'bois_sombre', qty: 1 }], reward: { key: 'ceinture_terre', name: 'Ceinture tellurique', qty: 1, slot: 'cape', set: 'gaia', resistances: { terre: 8 } } },
+      { key: 'charmes_vent', name: 'Charmes du vent', costs: [{ key: 'plume_rapide', qty: 1 }, { key: 'fer_use', qty: 1 }], reward: { key: 'charmes_vent', name: 'Charmes du vent', qty: 1, slot: 'amulette', set: 'zephyr', resistances: { air: 8 } } },
     ];
 
     const SET_BONUSES = {
@@ -520,6 +522,19 @@
           1: { label: '+8% feu et +5 dégâts ressentis', stats: { feu: 8, bonusDamage: 5 } },
         },
       },
+      gaia: {
+        name: 'Panoplie tellurique',
+        bonuses: {
+          1: { label: '+8% terre et +10 PV', stats: { terre: 8, maxHp: 10 } },
+        },
+      },
+      zephyr: {
+        name: 'Panoplie du zéphyr',
+        bonuses: {
+          1: { label: '+8% air et +1 PM', stats: { air: 8, mp: 1 } },
+        },
+      },
+    };
     };
 
     const WORLD_POI = {
