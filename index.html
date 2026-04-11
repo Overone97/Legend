@@ -246,6 +246,9 @@
     .world-tile.fire { background: linear-gradient(180deg, #dc2626, #7f1d1d); }
     .world-tile-label { font-size: 14px; }
     .world-tile-meta { font-size: 10px; opacity: 0.88; }
+    .world-tile-mark { font-size: 20px; line-height: 1; }
+    .npc-list { display: grid; gap: 10px; }
+    .npc-card { padding: 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); }
     .world-scene {
       display: grid;
       gap: 12px;
@@ -576,6 +579,35 @@
     };
 
     const LOCAL_SCREEN_SIZE = 5;
+
+    const SCREEN_DECOR = {
+      '0,0': {
+        landmarks: {
+          '1,1': { icon: '🏠', label: 'Maison du repos', type: 'Refuge' },
+          '3,1': { icon: '🛒', label: 'Échoppe', type: 'Marchand' },
+          '2,3': { icon: '🚪', label: 'Porte est', type: 'Sortie' },
+        },
+        npcs: [
+          { name: 'Maël', role: 'Guide', hint: 'Te pousse vers la route des recrues.' },
+          { name: 'Sera', role: 'Marchande', hint: 'Tient le coin sûr de Bourg-Legend.' },
+        ],
+      },
+      '1,1': {
+        landmarks: {
+          '2,0': { icon: '🪧', label: 'Panneau', type: 'Direction' },
+          '2,2': { icon: '⚑', label: 'Route des recrues', type: 'Passage' },
+        },
+        npcs: [
+          { name: 'Rouk', role: 'Éclaireur', hint: 'Préviens que la route devient moins gentille.' },
+        ],
+      },
+      '2,1': {
+        landmarks: {
+          '2,2': { icon: '🚪', label: 'Porte de l’est', type: 'Transition' },
+        },
+        npcs: [],
+      },
+    };
 
     const STARTING_POSITION = { x: 0, y: 0, mapId: 'Bourg-Legend', screenId: '0,0' };
     const SAFE_ZONE = new Set(['0,0', '0,1', '0,2', '1,0', '1,1', '1,2']);
@@ -1600,18 +1632,20 @@
         const ty = Math.floor(index / LOCAL_SCREEN_SIZE);
         const tileType = layout[ty]?.[tx] || screen?.biome || 'plains';
         const poi = tx === 2 && ty === 2 ? WORLD_POI[worldKey] : null;
+        const decor = SCREEN_DECOR[worldKey]?.landmarks?.[`${tx},${ty}`];
         const classes = ['world-tile', tileType];
         if (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2) classes.push('encounter');
-        if (poi) classes.push('poi');
+        if (poi || decor) classes.push('poi');
         if (tx === x && ty === y) classes.push('active');
         else if (isAdjacent(tx, ty)) classes.push('adjacent');
         const title = tx === x && ty === y
           ? '🧍 Toi'
-          : poi?.name || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? '⚔ Rencontre' : (tileType === 'safe' ? 'Ville' : tileType === 'road' ? 'Route' : tileType === 'forest' ? 'Forêt' : tileType === 'water' ? 'Eau' : tileType === 'fire' ? 'Braises' : 'Plaine'));
+          : decor?.label || poi?.name || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? '⚔ Rencontre' : (tileType === 'safe' ? 'Ville' : tileType === 'road' ? 'Route' : tileType === 'forest' ? 'Forêt' : tileType === 'water' ? 'Eau' : tileType === 'fire' ? 'Braises' : 'Plaine'));
         const meta = tx === x && ty === y
           ? `${character.mapId || 'Zone'} • écran ${character.screenId || '0,0'}`
-          : poi?.type || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? 'Danger' : tileType);
-        return `<button class="${classes.join(' ')}" data-x="${tx}" data-y="${ty}"><strong class="world-tile-label">${title}</strong><span class="world-tile-meta">${meta}</span></button>`;
+          : decor?.type || poi?.type || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? 'Danger' : tileType);
+        const mark = tx === x && ty === y ? '🧍' : decor?.icon || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? '⚔' : '');
+        return `<button class="${classes.join(' ')}" data-x="${tx}" data-y="${ty}"><span class="world-tile-mark">${mark}</span><strong class="world-tile-label">${title}</strong><span class="world-tile-meta">${meta}</span></button>`;
       }).join('');
       grid.querySelectorAll('.world-tile').forEach(tile => {
         tile.addEventListener('click', () => {
@@ -1656,9 +1690,13 @@
           <div class="badge-row">${Object.keys(screen?.exits || {}).length ? Object.keys(screen.exits).map(direction => `<span class="badge">${exitLabels[direction]}</span>`).join('') : '<span class="badge">Aucune sortie claire</span>'}</div>
         </div>
       `;
-      poiPreview.innerHTML = poi
-        ? `<div class="world-scene"><h4>${poi.name}</h4><div class="badge-row"><span class="badge">${poi.type}</span>${isSafeZone ? '<span class="badge">Zone sûre</span>' : ''}${WORLD_ENCOUNTERS.has(key) ? '<span class="badge">Rencontre possible</span>' : ''}</div><div class="hint">${poi.description}</div></div>`
-        : `<div class="world-scene"><h4>${isSafeZone ? 'Zone protégée' : 'Terrain ouvert'}</h4><div class="hint">${isSafeZone ? 'Tu restes dans l’ombre rassurante de Bourg-Legend.' : 'Pas de point d’intérêt ici, mais l’ambiance du biome commence à raconter quelque chose.'}</div></div>`;
+      const npcs = SCREEN_DECOR[key]?.npcs || [];
+      poiPreview.innerHTML = `
+        <div class="world-scene">
+          ${poi ? `<h4>${poi.name}</h4><div class="badge-row"><span class="badge">${poi.type}</span>${isSafeZone ? '<span class="badge">Zone sûre</span>' : ''}${WORLD_ENCOUNTERS.has(key) ? '<span class="badge">Rencontre possible</span>' : ''}</div><div class="hint">${poi.description}</div>` : `<h4>${isSafeZone ? 'Zone protégée' : 'Terrain ouvert'}</h4><div class="hint">${isSafeZone ? 'Tu restes dans l’ombre rassurante de Bourg-Legend.' : 'Pas de point d’intérêt ici, mais l’ambiance du biome commence à raconter quelque chose.'}</div>`}
+          <div class="npc-list">${npcs.length ? npcs.map(npc => `<div class="npc-card"><strong>${npc.name}</strong><div class="badge-row"><span class="badge">${npc.role}</span></div><div class="hint">${npc.hint}</div></div>`).join('') : '<div class="hint">Aucun PNJ notable sur cet écran pour l’instant.</div>'}</div>
+        </div>
+      `;
       if (key === '0,0') {
         setMessage('worldMessage', 'Tu es à Bourg-Legend. Suis la route vers l’est pour quitter la ville.', 'ok');
       } else if (zoneHint) {
