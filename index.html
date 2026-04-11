@@ -495,6 +495,8 @@
       { key: 'lame_braise', name: 'Lame de braise', costs: [{ key: 'braise_tiede', qty: 2 }, { key: 'fer_use', qty: 1 }], reward: { key: 'lame_braise', name: 'Lame de braise', qty: 1, slot: 'arme', set: 'brasier', resistances: { feu: 8 } } },
       { key: 'ceinture_terre', name: 'Ceinture tellurique', costs: [{ key: 'ecorce_lourde', qty: 1 }, { key: 'bois_sombre', qty: 1 }], reward: { key: 'ceinture_terre', name: 'Ceinture tellurique', qty: 1, slot: 'cape', set: 'gaia', resistances: { terre: 8 } } },
       { key: 'charmes_vent', name: 'Charmes du vent', costs: [{ key: 'plume_rapide', qty: 1 }, { key: 'fer_use', qty: 1 }], reward: { key: 'charmes_vent', name: 'Charmes du vent', qty: 1, slot: 'amulette', set: 'zephyr', resistances: { air: 8 } } },
+      { key: 'potion_soin', name: 'Potion de soin', costs: [{ key: 'perle_froide', qty: 1 }], reward: { key: 'potion_soin', name: 'Potion de soin', qty: 1, slot: 'consommable', heal: 30 } },
+      { key: 'onguent_braise', name: 'Onguent de braise', costs: [{ key: 'braise_tiede', qty: 1 }, { key: 'peau_rapee', qty: 1 }], reward: { key: 'onguent_braise', name: 'Onguent de braise', qty: 1, slot: 'consommable', heal: 45 } },
     ];
 
     const SET_BONUSES = {
@@ -1317,7 +1319,7 @@
             <strong>${recipe.name}</strong><br>
             <small>${recipe.costs.map(cost => `${cost.qty} ${cost.key.replaceAll('_', ' ')}`).join(' • ')}</small><br>
             <small>Possédé: ${owned}</small><br>
-            <small>Set: ${recipe.reward.set || 'aucun'} • Résistances: ${Object.entries(recipe.reward.resistances || {}).map(([k,v]) => `${k}+${v}%`).join(', ') || 'aucune'}</small><br>
+            <small>Set: ${recipe.reward.set || 'aucun'} • Résistances: ${Object.entries(recipe.reward.resistances || {}).map(([k,v]) => `${k}+${v}%`).join(', ') || 'aucune'}${recipe.reward.heal ? ` • Soin ${recipe.reward.heal}` : ''}</small><br>
             <button class="secondary" data-recipe="${recipe.key}" ${canCraft ? '' : 'disabled'}>Fabriquer</button>
             <button class="ghost" data-equip="${recipe.key}" ${owned > 0 ? '' : 'disabled'}>Équiper</button>
           </div>
@@ -1362,6 +1364,15 @@
       character.equipment = character.equipment || { arme: null, amulette: null, cape: null };
       if ((character.inventory[recipe.reward.key] || 0) <= 0) {
         setMessage('craftMessage', 'Objet non disponible dans l’inventaire.', 'error');
+        return;
+      }
+      if (recipe.reward.slot === 'consommable') {
+        const healed = recipe.reward.heal || 0;
+        character.hp = Math.min(100 + ((character.attributes?.vitalite || 0) * 2), (character.hp || 100) + healed);
+        character.inventory[recipe.reward.key] -= 1;
+        setMessage('craftMessage', `${recipe.reward.name} utilisé, +${healed} PV.`, 'ok');
+        renderCraft();
+        renderInventory();
         return;
       }
       character.equipment[recipe.reward.slot] = recipe.reward.name;
