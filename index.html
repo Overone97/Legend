@@ -760,6 +760,24 @@
       },
       'bourg-ouest': {
         landmarks: {
+          '1,2': { icon: '⛲', label: 'Petite fontaine', type: 'Fontaine', action: 'heal-fountain' },
+          '3,2': { icon: '🏡', label: 'Maisons basses', type: 'Habitat' },
+        },
+        npcs: [
+          { name: 'Lio', role: 'Habitant', hint: 'Profite du calme du quartier ouest.', action: 'guide' },
+        ],
+      },
+      'atelier-ville': {
+        landmarks: {
+          '2,2': { icon: '🛠', label: 'Atelier communal', type: 'Artisanat', action: 'open-craft' },
+          '3,1': { icon: '📦', label: 'Réserve', type: 'Stock', action: 'starter-kit' },
+        },
+        npcs: [
+          { name: 'Borin', role: 'Artisan', hint: 'Explique comment fabriquer ses premiers objets.', action: 'craft-help' },
+        ],
+      },
+      'bourg-ouest': {
+        landmarks: {
           '1,2': { icon: '⛲', label: 'Petite fontaine', type: 'Décor' },
           '3,2': { icon: '🏡', label: 'Maisons basses', type: 'Habitat' },
         },
@@ -1794,6 +1812,10 @@
         openSceneDialog(payload.name, 'Le Bosquet trouble commence juste après. Si tu y vas trop léger, tu vas le sentir passer.', [{ label: 'Merci', onClick: closeSceneDialog }]);
         return;
       }
+      if (payload.action === 'craft-help') {
+        openSceneDialog(payload.name, 'Commence par le craft simple à l’atelier communal. Avec quelques ressources, tu peux déjà t’équiper.', [{ label: 'Ouvrir le craft', onClick: () => { closeSceneDialog(); switchView('craftView'); } }, { label: 'Fermer', secondary: true, onClick: closeSceneDialog }]);
+        return;
+      }
       openSceneDialog(payload.name, 'Rien de spécial pour le moment.', [{ label: 'Fermer', onClick: closeSceneDialog }]);
     }
 
@@ -1803,6 +1825,22 @@
         return;
       }
       if (type === 'landmark') {
+        const character = game.currentCharacter;
+        if (payload.action === 'heal-fountain' && character) {
+          openSceneDialog(payload.label, 'Une eau claire et froide. Tu peux reprendre ton souffle ici.', [{ label: 'Me reposer', onClick: () => { character.hp = 100; setMessage('worldMessage', 'La fontaine te remet d’aplomb.', 'ok'); closeSceneDialog(); } }, { label: 'Fermer', secondary: true, onClick: closeSceneDialog }]);
+          return;
+        }
+        if (payload.action === 'open-craft') {
+          openSceneDialog(payload.label, 'L’atelier communal est prêt. C’est ici que ton loop de craft commence vraiment.', [{ label: 'Ouvrir le craft', onClick: () => { closeSceneDialog(); switchView('craftView'); } }, { label: 'Fermer', secondary: true, onClick: closeSceneDialog }]);
+          return;
+        }
+        if (payload.action === 'starter-kit' && character) {
+          character.inventory = character.inventory || {};
+          character.inventory.bois_sombre = (character.inventory.bois_sombre || 0) + 1;
+          character.inventory.fer_use = (character.inventory.fer_use || 0) + 1;
+          openSceneDialog(payload.label, 'Tu récupères un petit lot de départ pour bricoler quelque chose.', [{ label: 'Prendre', onClick: () => { setMessage('worldMessage', 'Tu récupères un petit kit de ressources.', 'ok'); closeSceneDialog(); renderGameHud(); } }]);
+          return;
+        }
         openSceneDialog(payload.label, `${payload.label} est un point interactif de type ${payload.type}.`, [{ label: 'Fermer', onClick: closeSceneDialog }]);
         return;
       }
@@ -1888,7 +1926,7 @@
       const actorNodes = [`<div class="scene-actor player" style="left:${playerLeft}%;top:${playerTop}%;"><button data-scene-type="player" data-name="${character.name}" data-map="${character.mapId}"><div class="scene-sprite">🧍</div><div class="scene-label">${character.name}</div></button></div>`];
       Object.entries(decor.landmarks || {}).forEach(([pos, landmark]) => {
         const [lx, ly] = pos.split(',').map(Number);
-        actorNodes.push(`<div class="scene-actor poi" style="left:${18 + lx * 16}%;top:${28 + ly * 12}%;"><button data-scene-type="landmark" data-label="${landmark.label}" data-role="${landmark.type}"><div class="scene-sprite">${landmark.icon}</div><div class="scene-label">${landmark.label}</div></button></div>`);
+        actorNodes.push(`<div class="scene-actor poi" style="left:${18 + lx * 16}%;top:${28 + ly * 12}%;"><button data-scene-type="landmark" data-label="${landmark.label}" data-role="${landmark.type}" data-action="${landmark.action || ''}"><div class="scene-sprite">${landmark.icon}</div><div class="scene-label">${landmark.label}</div></button></div>`);
       });
       (decor.npcs || []).forEach((npc, index) => {
         actorNodes.push(`<div class="scene-actor npc" style="left:${22 + index * 18}%;top:${62 - index * 6}%;"><button data-scene-type="npc" data-name="${npc.name}" data-role="${npc.role}" data-hint="${npc.hint}" data-action="${npc.action || ''}"><div class="scene-sprite">🧑</div><div class="scene-label">${npc.name}</div></button></div>`);
