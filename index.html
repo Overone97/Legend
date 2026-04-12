@@ -195,6 +195,7 @@
       position: relative;
       background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(15,23,42,0.08));
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), 0 20px 50px rgba(0,0,0,0.28);
+      cursor: pointer;
     }
     .scene-backdrop {
       position: absolute; inset: 0; overflow: hidden;
@@ -205,7 +206,7 @@
     .scene-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,23,42,0.1), rgba(15,23,42,0.35)); }
     .scene-titlebar { position: absolute; top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: start; gap: 12px; z-index: 2; }
     .scene-titlecard, .scene-hudcard { background: rgba(15,23,42,0.66); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 14px; backdrop-filter: blur(8px); }
-    .scene-actors { position: absolute; inset: 0; z-index: 2; }
+    .scene-actors { position: absolute; inset: 0; z-index: 3; }
     .scene-actor { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 6px; transition: left 0.22s linear, top 0.22s linear; }
     .scene-actor button { all: unset; display: grid; justify-items: center; gap: 6px; cursor: pointer; }
     .scene-sprite { width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center; font-size: 28px; background: rgba(15,23,42,0.78); border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 10px 24px rgba(0,0,0,0.28); }
@@ -219,6 +220,10 @@
     .scene-exit { position: absolute; pointer-events: auto; }
     .scene-exit button { background: rgba(15,23,42,0.75); border: 1px solid rgba(255,255,255,0.12); }
     .scene-floor { position: absolute; left: 0; right: 0; bottom: 0; height: 42%; background: linear-gradient(180deg, rgba(15,23,42,0), rgba(15,23,42,0.18) 15%, rgba(15,23,42,0.52)); z-index: 1; }
+    .illustrated-map-hitbox { position: absolute; inset: 0; z-index: 2; }
+    .scene-enemy { position: absolute; transform: translate(-50%, -50%); z-index: 3; }
+    .scene-enemy button { all: unset; cursor: pointer; display: grid; justify-items: center; gap: 6px; }
+    .scene-enemy .scene-sprite { background: linear-gradient(180deg, rgba(239,68,68,0.95), rgba(127,29,29,0.95)); border-color: rgba(252,165,165,0.6); }
     .world-grid {
       display: grid;
       grid-template-columns: repeat(10, 1fr);
@@ -490,6 +495,7 @@
               <div class="scene-titlecard" id="worldPreview"></div>
               <div class="scene-hudcard" id="screenExitButtons"></div>
             </div>
+            <div class="illustrated-map-hitbox" id="sceneHitbox"></div>
             <div class="scene-actors" id="sceneActors"></div>
             <div class="scene-exits" id="sceneExits"></div>
             <div class="dialog-box" id="sceneDialog" style="display:none;"></div>
@@ -637,6 +643,11 @@
 
 
     const dialogState = { visible: false, title: '', body: '', actions: [] };
+    const illustratedMapState = {
+      enemyByMap: {
+        'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 72, y: 58, encounterKey: 'bosquet-trouble' }],
+      },
+    };
 
     function openSceneDialog(title, body, actions = []) {
       dialogState.visible = true;
@@ -1778,6 +1789,22 @@
     }
 
 
+    function movePlayerToScenePercent(targetLeft, targetTop, callback = null) {
+      const character = game.currentCharacter;
+      if (!character) return;
+      const nextLocalX = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((targetLeft - 18) / 16)));
+      const nextLocalY = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((targetTop - 28) / 12)));
+      const actor = document.querySelector('.scene-actor.player');
+      if (actor) actor.classList.add('running');
+      character.localX = nextLocalX;
+      character.localY = nextLocalY;
+      renderMainScene();
+      setTimeout(() => {
+        if (callback) callback();
+        renderWorldPreview();
+      }, 180);
+    }
+
     function moveToScreen(direction) {
       const character = game.currentCharacter;
       if (!character) return;
@@ -1914,10 +1941,12 @@
       const backdrop = document.getElementById('sceneBackdrop');
       const actors = document.getElementById('sceneActors');
       const exits = document.getElementById('sceneExits');
+      const hitbox = document.getElementById('sceneHitbox');
       if (!character) {
         backdrop.style.background = SCENE_BACKDROPS.safe;
         actors.innerHTML = '<div class="scene-actor player" style="left:50%;top:60%;"><div class="scene-sprite">🧍</div><div class="scene-label">Choisis un personnage</div></div>';
         exits.innerHTML = '';
+        hitbox.innerHTML = '';
         return;
       }
       const mapKey = character.mapKey || STARTING_POSITION.mapKey;
@@ -1937,14 +1966,34 @@
       (decor.npcs || []).forEach((npc, index) => {
         actorNodes.push(`<div class="scene-actor npc" style="left:${22 + index * 18}%;top:${62 - index * 6}%;"><button data-scene-type="npc" data-name="${npc.name}" data-role="${npc.role}" data-hint="${npc.hint}" data-action="${npc.action || ''}"><div class="scene-sprite">🧑</div><div class="scene-label">${npc.name}</div></button></div>`);
       });
+      const enemies = illustratedMapState.enemyByMap[mapKey] || [];
+      enemies.forEach(enemy => {
+        actorNodes.push(`<div class="scene-enemy" style="left:${enemy.x}%;top:${enemy.y}%;"><button data-encounter-key="${enemy.encounterKey}"><div class="scene-sprite">⚔️</div><div class="scene-label">${enemy.name}</div></button></div>`);
+      });
       actors.innerHTML = actorNodes.join('');
       actors.querySelectorAll('[data-scene-type]').forEach(node => node.addEventListener('click', () => inspectSceneElement(node.dataset.sceneType, { name: node.dataset.name, mapId: node.dataset.map, label: node.dataset.label, role: node.dataset.role, hint: node.dataset.hint, type: node.dataset.role, action: node.dataset.action })));
+      actors.querySelectorAll('[data-encounter-key]').forEach(node => node.addEventListener('click', () => {
+        const encounter = ENCOUNTER_CONFIG[node.dataset.encounterKey];
+        if (!encounter) return;
+        setMessage('worldMessage', `Tu engages ${encounter.name}.`, 'error');
+        game.setCharacter(character);
+        switchView('combatView');
+        game.startBattle(encounter);
+      }));
       const exitButtons = [];
       if (screen?.exits?.up) exitButtons.push(`<div class="scene-exit" style="top:18px;left:50%;transform:translateX(-50%);"><button class="ghost" data-scene-exit="up">${screen.gateLabels?.up || '↑ Nord'}</button></div>`);
       if (screen?.exits?.down) exitButtons.push(`<div class="scene-exit" style="bottom:18px;left:50%;transform:translateX(-50%);"><button class="ghost" data-scene-exit="down">${screen.gateLabels?.down || '↓ Sud'}</button></div>`);
       if (screen?.exits?.left) exitButtons.push(`<div class="scene-exit" style="left:18px;top:50%;transform:translateY(-50%);"><button class="ghost" data-scene-exit="left">${screen.gateLabels?.left || '← Ouest'}</button></div>`);
       if (screen?.exits?.right) exitButtons.push(`<div class="scene-exit" style="right:18px;top:50%;transform:translateY(-50%);"><button class="ghost" data-scene-exit="right">${screen.gateLabels?.right || '→ Est'}</button></div>`);
       exits.innerHTML = exitButtons.join('');
+      hitbox.innerHTML = '';
+      hitbox.onclick = event => {
+        if (event.target.closest('button')) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const targetLeft = ((event.clientX - rect.left) / rect.width) * 100;
+        const targetTop = ((event.clientY - rect.top) / rect.height) * 100;
+        movePlayerToScenePercent(targetLeft, targetTop);
+      };
       exits.querySelectorAll('[data-scene-exit]').forEach(button => button.addEventListener('click', () => moveToScreen(button.dataset.sceneExit)));
       renderSceneDialog();
     }
@@ -2156,26 +2205,19 @@
         setMessage('worldMessage', 'Tu dois utiliser une sortie pour changer de map.', 'error');
         return;
       }
-      const actor = document.querySelector('.scene-actor.player');
-      if (actor) actor.classList.add('running');
-      character.localX = targetX;
-      character.localY = targetY;
       const positionKey = character.mapKey || STARTING_POSITION.mapKey;
-      document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • écran ${positionKey} • case ${character.localX}, ${character.localY}`;
-      renderMainScene();
-      if (!SAFE_ZONE.has(positionKey) && WORLD_ENCOUNTERS.has(positionKey) && targetX === 2 && targetY === 2) {
-        const encounter = ENCOUNTER_CONFIG[positionKey];
-        setMessage('worldMessage', `Rencontre : ${encounter?.name || 'ennemi inconnu'} sur ${character.mapId} !`, 'ok');
-        setTimeout(() => {
-          renderWorldPreview();
+      document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • écran ${positionKey} • case ${targetX}, ${targetY}`;
+      movePlayerToScenePercent(18 + targetX * 16, 28 + targetY * 12, () => {
+        if (!SAFE_ZONE.has(positionKey) && WORLD_ENCOUNTERS.has(positionKey) && targetX === 2 && targetY === 2) {
+          const encounter = ENCOUNTER_CONFIG[positionKey];
+          setMessage('worldMessage', `Rencontre : ${encounter?.name || 'ennemi inconnu'} sur ${character.mapId} !`, 'ok');
           switchView('combatView');
           game.setCharacter(character);
           game.startBattle(encounter);
-        }, 160);
-        return;
-      }
-      setMessage('worldMessage', `${character.name} court sur ${character.mapId}.`, 'ok');
-      setTimeout(() => renderWorldPreview(), 160);
+          return;
+        }
+        setMessage('worldMessage', `${character.name} court sur ${character.mapId}.`, 'ok');
+      });
     }
 
     document.getElementById('returnToWorldBtn').onclick = () => {
