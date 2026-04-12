@@ -204,8 +204,6 @@
     .scene-parallax, .scene-illustration { position: absolute; inset: 0; }
     .scene-illustration-layer { position: absolute; pointer-events: none; }
     .scene-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,23,42,0.1), rgba(15,23,42,0.35)); }
-    .scene-titlebar { position: absolute; top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: start; gap: 12px; z-index: 2; }
-    .scene-titlecard, .scene-hudcard { background: rgba(15,23,42,0.66); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 14px; backdrop-filter: blur(8px); }
     .scene-actors { position: absolute; inset: 0; z-index: 3; }
     .scene-actor { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 6px; transition: left 0.28s ease-out, top 0.28s ease-out; }
     .scene-actor.player { z-index: 5; }
@@ -239,9 +237,6 @@
     .scene-actor.npc .scene-sprite { background: rgba(88,28,135,0.82); }
     .scene-actor.poi .scene-sprite { background: rgba(120,53,15,0.82); }
     .scene-label { font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 999px; background: rgba(15,23,42,0.82); border: 1px solid rgba(255,255,255,0.08); }
-    .scene-exits { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-    .scene-exit { position: absolute; pointer-events: auto; }
-    .scene-exit button { background: rgba(15,23,42,0.75); border: 1px solid rgba(255,255,255,0.12); }
     .scene-floor { position: absolute; left: 0; right: 0; bottom: 0; height: 42%; background: linear-gradient(180deg, rgba(15,23,42,0), rgba(15,23,42,0.18) 15%, rgba(15,23,42,0.52)); z-index: 1; }
     .illustrated-map-hitbox { position: absolute; inset: 0; z-index: 2; }
     .scene-enemy { position: absolute; transform: translate(-50%, -50%); z-index: 3; }
@@ -523,17 +518,11 @@
           <div class="scene-canvas" id="sceneCanvas">
             <div class="scene-backdrop" id="sceneBackdrop"></div>
             <div class="scene-overlay"></div>
-            <div class="scene-titlebar">
-              <div class="scene-titlecard" id="worldPreview"></div>
-              <div class="scene-hudcard" id="screenExitButtons"></div>
-            </div>
             <div class="illustrated-map-hitbox" id="sceneHitbox"></div>
             <div class="scene-actors" id="sceneActors"></div>
-            <div class="scene-exits" id="sceneExits"></div>
             <div class="dialog-box" id="sceneDialog" style="display:none;"></div>
             <div class="scene-floor"></div>
           </div>
-          <div class="world-grid" id="worldGrid"></div>
         </div>
         <div class="panel create-card">
           <h3>Interface de jeu</h3>
@@ -1989,12 +1978,10 @@
       const character = game.currentCharacter;
       const backdrop = document.getElementById('sceneBackdrop');
       const actors = document.getElementById('sceneActors');
-      const exits = document.getElementById('sceneExits');
       const hitbox = document.getElementById('sceneHitbox');
       if (!character) {
         backdrop.style.background = SCENE_BACKDROPS.safe;
         actors.innerHTML = '<div class="scene-actor player" style="left:50%;top:60%;"><div class="scene-sprite">🧍</div><div class="scene-label">Choisis un personnage</div></div>';
-        exits.innerHTML = '';
         hitbox.innerHTML = '';
         return;
       }
@@ -2004,21 +1991,9 @@
       const illustration = SCENE_ILLUSTRATIONS[mapKey] || SCENE_ILLUSTRATIONS.default;
       backdrop.style.background = `${illustration.sky}, ${SCENE_BACKDROPS[biome] || SCENE_BACKDROPS.safe}`;
       backdrop.innerHTML = `<div class="scene-parallax">${(illustration.layers || []).map(layer => `<div class="scene-illustration-layer" style="${layer.style}"></div>`).join('')}</div>`;
-      const decor = SCREEN_DECOR[mapKey] || { landmarks: {}, npcs: [] };
       const playerLeft = 18 + ((character.localX ?? 2) * 16);
       const playerTop = 28 + ((character.localY ?? 2) * 12);
-      const actorNodes = [`<div class="scene-actor player" data-facing="${character.facing || 'down'}" style="left:${playerLeft}%;top:${playerTop}%;"><button data-scene-type="player" data-name="${character.name}" data-map="${character.mapId}"><div class="scene-sprite"><div class="warrior-sprite"><div class="warrior-shadow"></div><div class="warrior-head"></div><div class="warrior-body"></div><div class="warrior-arm left"></div><div class="warrior-arm right"></div><div class="warrior-leg left"></div><div class="warrior-leg right"></div></div></div><div class="scene-label">${character.name}</div></button></div>`];
-      const landmarkPositions = illustratedMapState.landmarkPositions[mapKey] || {};
-      Object.entries(decor.landmarks || {}).forEach(([pos, landmark]) => {
-        const fallback = { x: 18, y: 40 };
-        const placed = landmarkPositions[pos] || fallback;
-        actorNodes.push(`<div class="scene-actor poi" style="left:${placed.x}%;top:${placed.y}%;"><button data-scene-type="landmark" data-label="${landmark.label}" data-role="${landmark.type}" data-action="${landmark.action || ''}"><div class="scene-sprite">${landmark.icon}</div><div class="scene-label">${landmark.label}</div></button></div>`);
-      });
-      const npcPositions = illustratedMapState.npcPositions[mapKey] || [];
-      (decor.npcs || []).forEach((npc, index) => {
-        const placed = npcPositions[index] || { x: 22 + index * 18, y: 62 - index * 6 };
-        actorNodes.push(`<div class="scene-actor npc" style="left:${placed.x}%;top:${placed.y}%;"><button data-scene-type="npc" data-name="${npc.name}" data-role="${npc.role}" data-hint="${npc.hint}" data-action="${npc.action || ''}"><div class="scene-sprite">🧑</div><div class="scene-label">${npc.name}</div></button></div>`);
-      });
+      const actorNodes = [`<div class="scene-actor player" data-facing="${character.facing || 'down'}" style="left:${playerLeft}%;top:${playerTop}%;"><button data-scene-type="player" data-name="${character.name}" data-map="${character.mapId}"><div class="scene-sprite"><div class="warrior-sprite"><div class="warrior-shadow"></div><div class="warrior-head"></div><div class="warrior-body"></div><div class="warrior-arm left"></div><div class="warrior-arm right"></div><div class="warrior-leg left"></div><div class="warrior-leg right"></div></div></div></button></div>`];
       const enemies = illustratedMapState.enemyByMap[mapKey] || [];
       enemies.forEach(enemy => {
         actorNodes.push(`<div class="scene-enemy" style="left:${enemy.x}%;top:${enemy.y}%;"><button data-encounter-key="${enemy.encounterKey}"><div class="scene-sprite"><div class="enemy-sprite"><div class="enemy-shadow"></div><div class="enemy-head"></div><div class="enemy-body"></div><div class="enemy-leg left"></div><div class="enemy-leg right"></div></div></div><div class="scene-label">${enemy.name}</div></button></div>`);
@@ -2033,12 +2008,6 @@
         switchView('combatView');
         game.startBattle(encounter);
       }));
-      const exitButtons = [];
-      if (screen?.exits?.up) exitButtons.push(`<div class="scene-exit" style="top:18px;left:50%;transform:translateX(-50%);"><button class="ghost" data-scene-exit="up">${screen.gateLabels?.up || '↑ Nord'}</button></div>`);
-      if (screen?.exits?.down) exitButtons.push(`<div class="scene-exit" style="bottom:18px;left:50%;transform:translateX(-50%);"><button class="ghost" data-scene-exit="down">${screen.gateLabels?.down || '↓ Sud'}</button></div>`);
-      if (screen?.exits?.left) exitButtons.push(`<div class="scene-exit" style="left:18px;top:50%;transform:translateY(-50%);"><button class="ghost" data-scene-exit="left">${screen.gateLabels?.left || '← Ouest'}</button></div>`);
-      if (screen?.exits?.right) exitButtons.push(`<div class="scene-exit" style="right:18px;top:50%;transform:translateY(-50%);"><button class="ghost" data-scene-exit="right">${screen.gateLabels?.right || '→ Est'}</button></div>`);
-      exits.innerHTML = exitButtons.join('');
       hitbox.innerHTML = '';
       hitbox.onclick = event => {
         if (event.target.closest('button')) return;
@@ -2048,50 +2017,11 @@
         setMessage('worldMessage', `${character.name} se déplace sur la carte.`, 'ok');
         movePlayerToScenePercent(targetLeft, targetTop);
       };
-      exits.querySelectorAll('[data-scene-exit]').forEach(button => button.addEventListener('click', () => moveToScreen(button.dataset.sceneExit)));
       renderSceneDialog();
     }
 
     function renderWorldGrid() {
-      const grid = document.getElementById('worldGrid');
-      const exits = document.getElementById('screenExitButtons');
-      const character = game.currentCharacter;
-      if (!character) {
-        grid.innerHTML = '<div class="hint">Choisis un personnage pour afficher la carte.</div>';
-        exits.innerHTML = '';
-        return;
-      }
-      const screen = MAPS[character.mapKey || STARTING_POSITION.mapKey] || MAPS[STARTING_POSITION.mapKey];
-      const exitLabels = { up: '↑ Nord', down: '↓ Sud', left: '← Ouest', right: '→ Est' };
-      exits.className = 'screen-nav';
-      exits.innerHTML = `
-        <span class="screen-nav-spacer"></span>
-        <button class="ghost" data-exit="up" ${screen?.exits?.up ? '' : 'disabled'}>${exitLabels.up}</button>
-        <span class="screen-nav-spacer"></span>
-        <button class="ghost" data-exit="left" ${screen?.exits?.left ? '' : 'disabled'}>${exitLabels.left}</button>
-        <span class="badge">${screen?.name || 'Écran'}</span>
-        <button class="ghost" data-exit="right" ${screen?.exits?.right ? '' : 'disabled'}>${exitLabels.right}</button>
-        <span class="screen-nav-spacer"></span>
-        <button class="ghost" data-exit="down" ${screen?.exits?.down ? '' : 'disabled'}>${exitLabels.down}</button>
-        <span class="screen-nav-spacer"></span>
-      `;
-      exits.querySelectorAll('[data-exit]').forEach(button => button.addEventListener('click', () => moveToScreen(button.dataset.exit)));
-      const x = character.localX ?? 2;
-      const y = character.localY ?? 2;
-      const isAdjacent = (tx, ty) => Math.abs(tx - x) + Math.abs(ty - y) === 1;
-      const layout = LOCAL_SCREEN_LAYOUTS[screen?.biome || 'plains'] || LOCAL_SCREEN_LAYOUTS.plains;
-      const worldKey = character.mapKey || STARTING_POSITION.mapKey;
-      grid.style.gridTemplateColumns = `repeat(${LOCAL_SCREEN_SIZE}, 1fr)`;
-      grid.innerHTML = Array.from({ length: LOCAL_SCREEN_SIZE * LOCAL_SCREEN_SIZE }, (_, index) => {
-        const tx = index % LOCAL_SCREEN_SIZE;
-        const ty = Math.floor(index / LOCAL_SCREEN_SIZE);
-        const tileType = layout[ty]?.[tx] || screen?.biome || 'plains';
-        const poi = tx === 2 && ty === 2 ? WORLD_POI[worldKey] : null;
-        const decor = SCREEN_DECOR[worldKey]?.landmarks?.[`${tx},${ty}`];
-        const classes = ['world-tile', tileType];
-        if (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2) classes.push('encounter');
-        if (poi || decor) classes.push('poi');
-        if (tx === x && ty === y) classes.push('active');
+      return;
         else if (isAdjacent(tx, ty)) classes.push('adjacent');
         const title = tx === x && ty === y
           ? '🧍 Toi'
@@ -2112,37 +2042,13 @@
     }
 
     function renderWorldPreview() {
-      const preview = document.getElementById('worldPreview');
       const character = game.currentCharacter;
       if (!character) {
-        preview.innerHTML = '<div class="hint">Sélectionne un personnage pour explorer la carte.</div>';
         renderMainScene();
         renderGameHud();
         renderWorldGrid();
         return;
       }
-      const key = character.mapKey || STARTING_POSITION.mapKey;
-      const poi = WORLD_POI[key];
-      const isSafeZone = SAFE_ZONE.has(key);
-      const zoneHint = key === 'lisiere-entrainement'
-        ? 'Tu quittes doucement la zone d’apprentissage.'
-        : key === 'bois-heurts'
-          ? 'Attention, la pression monte ici.'
-          : key === 'bourg-basses'
-            ? 'Zone franchement dangereuse. Mieux vaut être prêt.'
-            : '';
-      const screen = MAPS[character.mapKey || STARTING_POSITION.mapKey];
-      const exitLabels = { up: '↑ Nord', down: '↓ Sud', left: '← Ouest', right: '→ Est' };
-      preview.innerHTML = `
-        <h4>${screen?.name || character.mapId || 'Zone inconnue'}</h4>
-        <div class="badge-row">
-          <span class="badge">Classe ${character.class}</span>
-          <span class="badge">Écran ${character.mapKey || 'bourg-centre'}</span>
-          <span class="badge">Case locale ${character.localX ?? 2},${character.localY ?? 2}</span>
-        </div>
-        <div class="hint">Scène principale du jeu, avec HUD latéral et transitions intégrées.</div>
-        <div class="badge-row">${Object.keys(screen?.exits || {}).length ? Object.keys(screen.exits).map(direction => `<span class="badge">${exitLabels[direction]}</span>`).join('') : '<span class="badge">Aucune sortie claire</span>'}</div>
-      `;
       if (key === 'bourg-centre') {
         setMessage('worldMessage', 'Tu es à Bourg-Legend. Suis la route vers l’est pour quitter la ville.', 'ok');
       } else if (zoneHint) {
