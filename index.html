@@ -646,6 +646,18 @@
     const illustratedMapState = {
       enemyByMap: {
         'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 72, y: 58, encounterKey: 'bosquet-trouble' }],
+        'route-recrues': [{ id: 'enemy-road', name: 'Rôdeur nerveux', x: 68, y: 54, encounterKey: 'route-rodeur' }],
+      },
+      npcPositions: {
+        'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
+        'atelier-ville': [{ name: 'Borin', x: 62, y: 52 }],
+      },
+      landmarkPositions: {
+        'bourg-centre': { '1,1': { x: 16, y: 42 }, '3,1': { x: 20, y: 36 }, '2,3': { x: 84, y: 50 }, '0,2': { x: 28, y: 70 } },
+        'bourg-ouest': { '1,2': { x: 34, y: 56 }, '3,2': { x: 60, y: 44 } },
+        'atelier-ville': { '2,2': { x: 48, y: 50 }, '3,1': { x: 66, y: 38 } },
+        'route-recrues': { '2,0': { x: 42, y: 28 }, '2,2': { x: 76, y: 52 } },
+        'porte-est': { '2,2': { x: 82, y: 48 } },
       },
     };
 
@@ -1959,12 +1971,16 @@
       const playerLeft = 18 + ((character.localX ?? 2) * 16);
       const playerTop = 28 + ((character.localY ?? 2) * 12);
       const actorNodes = [`<div class="scene-actor player" style="left:${playerLeft}%;top:${playerTop}%;"><button data-scene-type="player" data-name="${character.name}" data-map="${character.mapId}"><div class="scene-sprite">🧍</div><div class="scene-label">${character.name}</div></button></div>`];
+      const landmarkPositions = illustratedMapState.landmarkPositions[mapKey] || {};
       Object.entries(decor.landmarks || {}).forEach(([pos, landmark]) => {
-        const [lx, ly] = pos.split(',').map(Number);
-        actorNodes.push(`<div class="scene-actor poi" style="left:${18 + lx * 16}%;top:${28 + ly * 12}%;"><button data-scene-type="landmark" data-label="${landmark.label}" data-role="${landmark.type}" data-action="${landmark.action || ''}"><div class="scene-sprite">${landmark.icon}</div><div class="scene-label">${landmark.label}</div></button></div>`);
+        const fallback = { x: 18, y: 40 };
+        const placed = landmarkPositions[pos] || fallback;
+        actorNodes.push(`<div class="scene-actor poi" style="left:${placed.x}%;top:${placed.y}%;"><button data-scene-type="landmark" data-label="${landmark.label}" data-role="${landmark.type}" data-action="${landmark.action || ''}"><div class="scene-sprite">${landmark.icon}</div><div class="scene-label">${landmark.label}</div></button></div>`);
       });
+      const npcPositions = illustratedMapState.npcPositions[mapKey] || [];
       (decor.npcs || []).forEach((npc, index) => {
-        actorNodes.push(`<div class="scene-actor npc" style="left:${22 + index * 18}%;top:${62 - index * 6}%;"><button data-scene-type="npc" data-name="${npc.name}" data-role="${npc.role}" data-hint="${npc.hint}" data-action="${npc.action || ''}"><div class="scene-sprite">🧑</div><div class="scene-label">${npc.name}</div></button></div>`);
+        const placed = npcPositions[index] || { x: 22 + index * 18, y: 62 - index * 6 };
+        actorNodes.push(`<div class="scene-actor npc" style="left:${placed.x}%;top:${placed.y}%;"><button data-scene-type="npc" data-name="${npc.name}" data-role="${npc.role}" data-hint="${npc.hint}" data-action="${npc.action || ''}"><div class="scene-sprite">🧑</div><div class="scene-label">${npc.name}</div></button></div>`);
       });
       const enemies = illustratedMapState.enemyByMap[mapKey] || [];
       enemies.forEach(enemy => {
