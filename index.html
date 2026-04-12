@@ -201,6 +201,12 @@
       position: absolute; inset: 0; overflow: hidden;
       background-size: cover; background-position: center; filter: saturate(1.05);
     }
+    .scene-backdrop.beta-map {
+      background-image: url('./assets/beta-warrior-map.jpg');
+      background-size: cover;
+      background-position: center;
+      filter: none;
+    }
     .scene-parallax, .scene-illustration { position: absolute; inset: 0; }
     .scene-illustration-layer { position: absolute; pointer-events: none; }
     .scene-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,23,42,0.1), rgba(15,23,42,0.35)); }
@@ -1839,15 +1845,17 @@
     function movePlayerToScenePercent(targetLeft, targetTop, callback = null) {
       const character = game.currentCharacter;
       if (!character) return;
-      const currentX = character.localX ?? 2;
-      const currentY = character.localY ?? 2;
-      const nextLocalX = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((targetLeft - 18) / 16)));
-      const nextLocalY = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((targetTop - 28) / 12)));
-      character.facing = getFacingDirection(currentX, currentY, nextLocalX, nextLocalY, character.facing || 'down');
+      const currentLeft = character.sceneLeft ?? 50;
+      const currentTop = character.sceneTop ?? 58;
+      const clampedLeft = Math.max(10, Math.min(90, targetLeft));
+      const clampedTop = Math.max(18, Math.min(86, targetTop));
+      character.facing = getFacingDirection(currentLeft, currentTop, clampedLeft, clampedTop, character.facing || 'down');
       const actor = document.querySelector('.scene-actor.player');
       if (actor) actor.classList.add('running');
-      character.localX = nextLocalX;
-      character.localY = nextLocalY;
+      character.sceneLeft = clampedLeft;
+      character.sceneTop = clampedTop;
+      character.localX = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((clampedLeft - 18) / 16)));
+      character.localY = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((clampedTop - 28) / 12)));
       renderMainScene();
       setTimeout(() => {
         const rerenderedActor = document.querySelector('.scene-actor.player');
@@ -1989,11 +1997,20 @@
       const screen = MAPS[mapKey] || MAPS[STARTING_POSITION.mapKey];
       const biome = screen?.biome || 'safe';
       const illustration = SCENE_ILLUSTRATIONS[mapKey] || SCENE_ILLUSTRATIONS.default;
-      backdrop.style.background = `${illustration.sky}, ${SCENE_BACKDROPS[biome] || SCENE_BACKDROPS.safe}`;
-      backdrop.innerHTML = `<div class="scene-parallax">${(illustration.layers || []).map(layer => `<div class="scene-illustration-layer" style="${layer.style}"></div>`).join('')}</div>`;
-      const playerLeft = 18 + ((character.localX ?? 2) * 16);
-      const playerTop = 28 + ((character.localY ?? 2) * 12);
+      if (mapKey === BETA_SINGLE_MAP) {
+        backdrop.className = 'scene-backdrop beta-map';
+        backdrop.style.background = '';
+        backdrop.innerHTML = '';
+      } else {
+        backdrop.className = 'scene-backdrop';
+        backdrop.style.background = `${illustration.sky}, ${SCENE_BACKDROPS[biome] || SCENE_BACKDROPS.safe}`;
+        backdrop.innerHTML = `<div class="scene-parallax">${(illustration.layers || []).map(layer => `<div class="scene-illustration-layer" style="${layer.style}"></div>`).join('')}</div>`;
+      }
+      const playerLeft = character.sceneLeft ?? 50;
+      const playerTop = character.sceneTop ?? 58;
       const actorNodes = [`<div class="scene-actor player" data-facing="${character.facing || 'down'}" style="left:${playerLeft}%;top:${playerTop}%;"><button data-scene-type="player" data-name="${character.name}" data-map="${character.mapId}"><div class="scene-sprite"><div class="warrior-sprite"><div class="warrior-shadow"></div><div class="warrior-head"></div><div class="warrior-body"></div><div class="warrior-arm left"></div><div class="warrior-arm right"></div><div class="warrior-leg left"></div><div class="warrior-leg right"></div></div></div></button></div>`];
+      if (character.sceneLeft == null) character.sceneLeft = 50;
+      if (character.sceneTop == null) character.sceneTop = 58;
       const enemies = illustratedMapState.enemyByMap[mapKey] || [];
       enemies.forEach(enemy => {
         actorNodes.push(`<div class="scene-enemy" style="left:${enemy.x}%;top:${enemy.y}%;"><button data-encounter-key="${enemy.encounterKey}"><div class="scene-sprite"><div class="enemy-sprite"><div class="enemy-shadow"></div><div class="enemy-head"></div><div class="enemy-body"></div><div class="enemy-leg left"></div><div class="enemy-leg right"></div></div></div><div class="scene-label">${enemy.name}</div></button></div>`);
