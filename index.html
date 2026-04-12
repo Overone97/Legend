@@ -567,9 +567,11 @@
     };
 
     const MAPS = {
-      'bourg-centre': { name: 'Bourg-Legend', biome: 'safe', exits: { right: 'bourg-est', down: 'bourg-sud' } },
+      'bourg-centre': { name: 'Bourg-Legend', biome: 'safe', exits: { right: 'bourg-est', down: 'bourg-sud', left: 'bourg-ouest' }, gateLabels: { left: 'Quartier ouest' } },
+      'bourg-ouest': { name: 'Quartier ouest', biome: 'safe', exits: { right: 'bourg-centre', down: 'atelier-ville' }, gateLabels: { right: 'Place centrale', down: 'Vers l’atelier' } },
+      'atelier-ville': { name: 'Atelier de Bourg', biome: 'safe', exits: { up: 'bourg-ouest', right: 'bourg-sud' }, gateLabels: { up: 'Quartier ouest', right: 'Retour au sud' } },
       'bourg-est': { name: 'Route est', biome: 'road', exits: { left: 'bourg-centre', right: 'porte-est', down: 'route-recrues' }, gateLabels: { right: 'Passage vers la porte', left: 'Retour place centrale' } },
-      'bourg-sud': { name: 'Bas-bourg', biome: 'safe', exits: { up: 'bourg-centre', right: 'route-recrues', down: 'bourg-basses' }, gateLabels: { down: 'Vers les fourrés', up: 'Retour au centre' } },
+      'bourg-sud': { name: 'Bas-bourg', biome: 'safe', exits: { up: 'bourg-centre', right: 'route-recrues', down: 'bourg-basses', left: 'atelier-ville' }, gateLabels: { down: 'Vers les fourrés', up: 'Retour au centre', left: 'Atelier' } },
       'route-recrues': { name: 'Route des recrues', biome: 'road', exits: { up: 'bourg-est', left: 'bourg-sud', right: 'porte-est', down: 'chemin-novices' } },
       'porte-est': { name: 'Porte de l’est', biome: 'road', exits: { left: 'route-recrues', down: 'bosquet-trouble', right: 'rives-claires' }, gateLabels: { down: 'Vers le bosquet', right: 'Vers les rives' } },
       'bosquet-trouble': { name: 'Bosquet trouble', biome: 'forest', exits: { up: 'porte-est', down: 'chemin-novices' } },
@@ -682,6 +684,20 @@
           { style: 'right:12%;bottom:14%;width:18%;height:34%;background:linear-gradient(180deg, rgba(17,24,39,0.15), rgba(17,24,39,0.9));clip-path:polygon(50% 0, 100% 20%, 68% 100%, 32% 100%, 0 20%);' },
         ],
       },
+      'bourg-ouest': {
+        sky: 'linear-gradient(180deg, rgba(226,232,240,0.9), rgba(187,247,208,0.25) 32%, rgba(15,23,42,0.06))',
+        layers: [
+          { style: 'left:6%;bottom:0;width:28%;height:42%;background:linear-gradient(180deg, rgba(120,113,108,0), rgba(71,85,105,0.8));clip-path:polygon(8% 100%, 8% 46%, 28% 22%, 54% 12%, 82% 32%, 92% 100%);' },
+          { style: 'right:10%;bottom:0;width:24%;height:48%;background:linear-gradient(180deg, rgba(120,113,108,0), rgba(100,116,139,0.84));clip-path:polygon(12% 100%, 8% 44%, 34% 16%, 68% 20%, 88% 46%, 92% 100%);' },
+        ],
+      },
+      'atelier-ville': {
+        sky: 'linear-gradient(180deg, rgba(254,240,138,0.35), rgba(191,219,254,0.2) 30%, rgba(15,23,42,0.08))',
+        layers: [
+          { style: 'left:18%;bottom:0;width:30%;height:56%;background:linear-gradient(180deg, rgba(245,158,11,0.12), rgba(120,53,15,0.92));clip-path:polygon(16% 100%, 10% 34%, 50% 0, 90% 34%, 84% 100%);' },
+          { style: 'right:14%;bottom:0;width:18%;height:34%;background:linear-gradient(180deg, rgba(51,65,85,0.12), rgba(30,41,59,0.92));clip-path:polygon(22% 100%, 12% 42%, 50% 10%, 88% 42%, 78% 100%);' },
+        ],
+      },
       'route-recrues': {
         sky: 'linear-gradient(180deg, rgba(250,245,214,0.92), rgba(234,179,8,0.18) 32%, rgba(120,113,108,0.08))',
         layers: [
@@ -741,6 +757,24 @@
           '2,2': { icon: '🚪', label: 'Porte de l’est', type: 'Transition' },
         },
         npcs: [],
+      },
+      'bourg-ouest': {
+        landmarks: {
+          '1,2': { icon: '⛲', label: 'Petite fontaine', type: 'Décor' },
+          '3,2': { icon: '🏡', label: 'Maisons basses', type: 'Habitat' },
+        },
+        npcs: [
+          { name: 'Lio', role: 'Habitant', hint: 'Profite du calme du quartier ouest.', action: 'guide' },
+        ],
+      },
+      'atelier-ville': {
+        landmarks: {
+          '2,2': { icon: '🛠', label: 'Atelier communal', type: 'Artisanat' },
+          '3,1': { icon: '📦', label: 'Réserve', type: 'Stock' },
+        },
+        npcs: [
+          { name: 'Borin', role: 'Artisan', hint: 'Explique comment fabriquer ses premiers objets.', action: 'guide' },
+        ],
       },
     };
 
@@ -820,6 +854,16 @@
         name: 'Bourg-Legend',
         type: 'Ville de départ',
         description: 'Le premier refuge du joueur. Ici, on souffle, on se prépare, et on repart vers la route.',
+      },
+      'bourg-ouest': {
+        name: 'Quartier ouest',
+        type: 'Quartier résidentiel',
+        description: 'Un coin plus calme de Bourg-Legend, avec quelques habitants et un rythme plus doux.',
+      },
+      'atelier-ville': {
+        name: 'Atelier de Bourg',
+        type: 'Artisanat',
+        description: 'Le cœur manuel de la ville, là où le craft commence à devenir concret.',
       },
       'route-recrues': {
         name: 'Route des recrues',
