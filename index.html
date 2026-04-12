@@ -2022,23 +2022,6 @@
 
     function renderWorldGrid() {
       return;
-        else if (isAdjacent(tx, ty)) classes.push('adjacent');
-        const title = tx === x && ty === y
-          ? '🧍 Toi'
-          : decor?.label || poi?.name || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? '⚔ Rencontre' : (tileType === 'safe' ? 'Ville' : tileType === 'road' ? 'Route' : tileType === 'forest' ? 'Forêt' : tileType === 'water' ? 'Eau' : tileType === 'fire' ? 'Braises' : 'Plaine'));
-        const meta = tx === x && ty === y
-          ? `${character.mapId || 'Zone'} • écran ${character.mapKey || 'bourg-centre'}`
-          : decor?.type || poi?.type || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? 'Danger' : tileType);
-        const mark = tx === x && ty === y ? '🧍' : decor?.icon || (WORLD_ENCOUNTERS.has(worldKey) && tx === 2 && ty === 2 ? '⚔' : '');
-        return `<button class="${classes.join(' ')}" data-x="${tx}" data-y="${ty}"><span class="world-tile-mark">${mark}</span><strong class="world-tile-label">${title}</strong><span class="world-tile-meta">${meta}</span></button>`;
-      }).join('');
-      grid.querySelectorAll('.world-tile').forEach(tile => {
-        tile.addEventListener('click', () => {
-          const tx = Number(tile.dataset.x);
-          const ty = Number(tile.dataset.y);
-          moveCurrentCharacterTo(tx, ty);
-        });
-      });
     }
 
     function renderWorldPreview() {
@@ -2049,11 +2032,7 @@
         renderWorldGrid();
         return;
       }
-      if (key === 'bourg-centre') {
-        setMessage('worldMessage', 'Tu es à Bourg-Legend. Suis la route vers l’est pour quitter la ville.', 'ok');
-      } else if (zoneHint) {
-        setMessage('worldMessage', zoneHint, key === 'bourg-basses' ? 'error' : 'ok');
-      }
+      setMessage('worldMessage', 'Beta mono-map active. Clique sur la carte pour te déplacer.', 'ok');
       renderMainScene();
       renderGameHud();
       renderWorldGrid();
