@@ -206,10 +206,12 @@
     .scene-titlebar { position: absolute; top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: start; gap: 12px; z-index: 2; }
     .scene-titlecard, .scene-hudcard { background: rgba(15,23,42,0.66); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 14px; backdrop-filter: blur(8px); }
     .scene-actors { position: absolute; inset: 0; z-index: 2; }
-    .scene-actor { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 6px; }
+    .scene-actor { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 6px; transition: left 0.22s linear, top 0.22s linear; }
     .scene-actor button { all: unset; display: grid; justify-items: center; gap: 6px; cursor: pointer; }
     .scene-sprite { width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center; font-size: 28px; background: rgba(15,23,42,0.78); border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 10px 24px rgba(0,0,0,0.28); }
-    .scene-actor.player .scene-sprite { background: rgba(20,83,45,0.88); border-color: rgba(110,231,183,0.5); }
+    .scene-actor.player .scene-sprite { background: linear-gradient(180deg, rgba(34,197,94,0.95), rgba(21,128,61,0.95)); border-color: rgba(110,231,183,0.7); position: relative; overflow: hidden; }
+    .scene-actor.player .scene-sprite::before { content: ''; position: absolute; top: 8px; width: 18px; height: 18px; border-radius: 999px; background: rgba(255,255,255,0.9); box-shadow: 0 22px 0 6px rgba(255,255,255,0.9); }
+    .scene-actor.player.running .scene-sprite { transform: skewX(-8deg) translateY(-2px); box-shadow: 0 16px 28px rgba(0,0,0,0.34); }
     .scene-actor.npc .scene-sprite { background: rgba(88,28,135,0.82); }
     .scene-actor.poi .scene-sprite { background: rgba(120,53,15,0.82); }
     .scene-label { font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 999px; background: rgba(15,23,42,0.82); border: 1px solid rgba(255,255,255,0.08); }
@@ -1785,13 +1787,17 @@
         setMessage('worldMessage', 'Pas de passage dans cette direction.', 'error');
         return;
       }
+      const actor = document.querySelector('.scene-actor.player');
+      if (actor) actor.classList.add('running');
       const nextScreen = MAPS[nextScreenId];
-      character.mapKey = nextScreenId;
-      character.mapId = nextScreen?.name || character.mapId;
-      character.localX = direction === 'right' ? 0 : direction === 'left' ? LOCAL_SCREEN_SIZE - 1 : 2;
-      character.localY = direction === 'down' ? 0 : direction === 'up' ? LOCAL_SCREEN_SIZE - 1 : 2;
-      setMessage('worldMessage', `Tu arrives sur ${character.mapId}.`, 'ok');
-      renderWorldPreview();
+      setTimeout(() => {
+        character.mapKey = nextScreenId;
+        character.mapId = nextScreen?.name || character.mapId;
+        character.localX = direction === 'right' ? 0 : direction === 'left' ? LOCAL_SCREEN_SIZE - 1 : 2;
+        character.localY = direction === 'down' ? 0 : direction === 'up' ? LOCAL_SCREEN_SIZE - 1 : 2;
+        setMessage('worldMessage', `Tu arrives sur ${character.mapId}.`, 'ok');
+        renderWorldPreview();
+      }, 140);
     }
 
 
@@ -2150,21 +2156,26 @@
         setMessage('worldMessage', 'Tu dois utiliser une sortie pour changer de map.', 'error');
         return;
       }
+      const actor = document.querySelector('.scene-actor.player');
+      if (actor) actor.classList.add('running');
       character.localX = targetX;
       character.localY = targetY;
       const positionKey = character.mapKey || STARTING_POSITION.mapKey;
       document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • écran ${positionKey} • case ${character.localX}, ${character.localY}`;
+      renderMainScene();
       if (!SAFE_ZONE.has(positionKey) && WORLD_ENCOUNTERS.has(positionKey) && targetX === 2 && targetY === 2) {
         const encounter = ENCOUNTER_CONFIG[positionKey];
         setMessage('worldMessage', `Rencontre : ${encounter?.name || 'ennemi inconnu'} sur ${character.mapId} !`, 'ok');
-        renderWorldPreview();
-        switchView('combatView');
-        game.setCharacter(character);
-        game.startBattle(encounter);
+        setTimeout(() => {
+          renderWorldPreview();
+          switchView('combatView');
+          game.setCharacter(character);
+          game.startBattle(encounter);
+        }, 160);
         return;
       }
-      setMessage('worldMessage', `${character.name} avance sur ${character.mapId}.`, 'ok');
-      renderWorldPreview();
+      setMessage('worldMessage', `${character.name} court sur ${character.mapId}.`, 'ok');
+      setTimeout(() => renderWorldPreview(), 160);
     }
 
     document.getElementById('returnToWorldBtn').onclick = () => {
