@@ -207,7 +207,7 @@
     .scene-titlebar { position: absolute; top: 18px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: start; gap: 12px; z-index: 2; }
     .scene-titlecard, .scene-hudcard { background: rgba(15,23,42,0.66); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 14px; backdrop-filter: blur(8px); }
     .scene-actors { position: absolute; inset: 0; z-index: 3; }
-    .scene-actor { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 6px; transition: left 0.22s linear, top 0.22s linear; }
+    .scene-actor { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 6px; transition: left 0.28s ease-out, top 0.28s ease-out; }
     .scene-actor.player { z-index: 5; }
     .scene-actor button { all: unset; display: grid; justify-items: center; gap: 6px; cursor: pointer; }
     .scene-sprite { width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center; font-size: 28px; background: rgba(15,23,42,0.78); border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 10px 24px rgba(0,0,0,0.28); }
@@ -227,6 +227,12 @@
     .scene-actor.player.running .warrior-leg.right, .scene-actor.player[data-facing="downRight"] .warrior-leg.right, .scene-actor.player[data-facing="right"] .warrior-leg.right, .scene-actor.player[data-facing="upRight"] .warrior-leg.right { transform: rotate(-24deg); }
     .scene-actor.player.running .warrior-arm.left { transform: rotate(-22deg); }
     .scene-actor.player.running .warrior-arm.right { transform: rotate(22deg); }
+    .scene-actor.player.running .warrior-sprite { animation: warrior-bob 0.28s ease-out 1; }
+    @keyframes warrior-bob {
+      0% { transform: translateY(0); }
+      35% { transform: translateY(-5px); }
+      100% { transform: translateY(0); }
+    }
     .scene-actor.player[data-facing="left"] .warrior-sprite, .scene-actor.player[data-facing="upLeft"] .warrior-sprite, .scene-actor.player[data-facing="downLeft"] .warrior-sprite { transform: scaleX(-1); }
     .scene-actor.player[data-facing="up"] .warrior-body, .scene-actor.player[data-facing="upLeft"] .warrior-body, .scene-actor.player[data-facing="upRight"] .warrior-body { top: 14px; height: 30px; }
     .scene-actor.player.running .scene-sprite { transform: translateY(-2px); }
@@ -1855,9 +1861,11 @@
       character.localY = nextLocalY;
       renderMainScene();
       setTimeout(() => {
+        const rerenderedActor = document.querySelector('.scene-actor.player');
+        rerenderedActor?.classList.remove('running');
         if (callback) callback();
         renderWorldPreview();
-      }, 180);
+      }, 280);
     }
 
     function moveToScreen(direction) {
