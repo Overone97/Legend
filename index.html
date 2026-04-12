@@ -240,7 +240,16 @@
     .illustrated-map-hitbox { position: absolute; inset: 0; z-index: 2; }
     .scene-enemy { position: absolute; transform: translate(-50%, -50%); z-index: 3; }
     .scene-enemy button { all: unset; cursor: pointer; display: grid; justify-items: center; gap: 6px; }
-    .scene-enemy .scene-sprite { background: linear-gradient(180deg, rgba(239,68,68,0.95), rgba(127,29,29,0.95)); border-color: rgba(252,165,165,0.6); }
+    .scene-enemy .scene-sprite { width: 60px; height: 70px; border-radius: 20px; background: linear-gradient(180deg, rgba(127,29,29,0.08), rgba(15,23,42,0.04)); border-color: rgba(252,165,165,0.35); box-shadow: none; }
+    .enemy-sprite { position: relative; width: 60px; height: 70px; }
+    .enemy-shadow { position: absolute; left: 50%; bottom: 4px; width: 30px; height: 10px; transform: translateX(-50%); border-radius: 999px; background: rgba(15,23,42,0.35); filter: blur(2px); }
+    .enemy-head { position: absolute; left: 50%; top: 4px; width: 18px; height: 18px; transform: translateX(-50%); border-radius: 999px; background: #fecaca; border: 2px solid rgba(255,255,255,0.75); }
+    .enemy-body { position: absolute; left: 50%; top: 18px; width: 24px; height: 28px; transform: translateX(-50%); border-radius: 10px; background: linear-gradient(180deg, #ef4444, #7f1d1d); border: 2px solid rgba(254,226,226,0.82); }
+    .enemy-leg { position: absolute; bottom: 10px; width: 9px; height: 24px; border-radius: 999px; background: #7f1d1d; }
+    .enemy-leg.left { left: 18px; transform: rotate(8deg); }
+    .enemy-leg.right { right: 18px; transform: rotate(-8deg); }
+    .scene-enemy button:hover .enemy-leg.left { transform: rotate(18deg); }
+    .scene-enemy button:hover .enemy-leg.right { transform: rotate(-18deg); }
     .world-grid {
       display: grid;
       grid-template-columns: repeat(10, 1fr);
@@ -2004,7 +2013,7 @@
       });
       const enemies = illustratedMapState.enemyByMap[mapKey] || [];
       enemies.forEach(enemy => {
-        actorNodes.push(`<div class="scene-enemy" style="left:${enemy.x}%;top:${enemy.y}%;"><button data-encounter-key="${enemy.encounterKey}"><div class="scene-sprite">⚔️</div><div class="scene-label">${enemy.name}</div></button></div>`);
+        actorNodes.push(`<div class="scene-enemy" style="left:${enemy.x}%;top:${enemy.y}%;"><button data-encounter-key="${enemy.encounterKey}"><div class="scene-sprite"><div class="enemy-sprite"><div class="enemy-shadow"></div><div class="enemy-head"></div><div class="enemy-body"></div><div class="enemy-leg left"></div><div class="enemy-leg right"></div></div></div><div class="scene-label">${enemy.name}</div></button></div>`);
       });
       actors.innerHTML = actorNodes.join('');
       actors.querySelectorAll('[data-scene-type]').forEach(node => node.addEventListener('click', () => inspectSceneElement(node.dataset.sceneType, { name: node.dataset.name, mapId: node.dataset.map, label: node.dataset.label, role: node.dataset.role, hint: node.dataset.hint, type: node.dataset.role, action: node.dataset.action })));
@@ -2026,8 +2035,8 @@
       hitbox.onclick = event => {
         if (event.target.closest('button')) return;
         const rect = event.currentTarget.getBoundingClientRect();
-        const targetLeft = ((event.clientX - rect.left) / rect.width) * 100;
-        const targetTop = ((event.clientY - rect.top) / rect.height) * 100;
+        const targetLeft = Math.max(12, Math.min(88, ((event.clientX - rect.left) / rect.width) * 100));
+        const targetTop = Math.max(22, Math.min(82, ((event.clientY - rect.top) / rect.height) * 100));
         setMessage('worldMessage', `${character.name} se déplace sur la carte.`, 'ok');
         movePlayerToScenePercent(targetLeft, targetTop);
       };
