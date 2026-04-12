@@ -646,7 +646,6 @@
     const illustratedMapState = {
       enemyByMap: {
         'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 72, y: 58, encounterKey: 'bosquet-trouble' }],
-        'route-recrues': [{ id: 'enemy-road', name: 'Rôdeur nerveux', x: 68, y: 54, encounterKey: 'route-rodeur' }],
       },
       npcPositions: {
         'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
@@ -821,7 +820,8 @@
       },
     };
 
-    const STARTING_POSITION = { x: 0, y: 0, mapId: 'Bourg-Legend', mapKey: 'bourg-centre' };
+    const BETA_SINGLE_MAP = 'bourg-centre';
+    const STARTING_POSITION = { x: 0, y: 0, mapId: 'Bourg-Legend', mapKey: BETA_SINGLE_MAP };
     const SAFE_ZONE = new Set(['bourg-centre', 'bourg-sud', 'bourg-est', 'route-recrues']);
     const INITIAL_WORLD_ENCOUNTERS = ['bosquet-trouble', 'bourg-basses', 'route-rodeur', 'rives-claires', 'clairiere-braises'];
     const WORLD_ENCOUNTERS = new Set(INITIAL_WORLD_ENCOUNTERS);
@@ -1804,8 +1804,11 @@
     function movePlayerToScenePercent(targetLeft, targetTop, callback = null) {
       const character = game.currentCharacter;
       if (!character) return;
+      const currentX = character.localX ?? 2;
+      const currentY = character.localY ?? 2;
       const nextLocalX = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((targetLeft - 18) / 16)));
       const nextLocalY = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((targetTop - 28) / 12)));
+      character.facing = nextLocalX > currentX ? 'right' : nextLocalX < currentX ? 'left' : nextLocalY > currentY ? 'down' : nextLocalY < currentY ? 'up' : character.facing || 'down';
       const actor = document.querySelector('.scene-actor.player');
       if (actor) actor.classList.add('running');
       character.localX = nextLocalX;
@@ -1820,23 +1823,7 @@
     function moveToScreen(direction) {
       const character = game.currentCharacter;
       if (!character) return;
-      const currentScreen = MAPS[character.mapKey || STARTING_POSITION.mapKey];
-      const nextScreenId = currentScreen?.exits?.[direction];
-      if (!nextScreenId) {
-        setMessage('worldMessage', 'Pas de passage dans cette direction.', 'error');
-        return;
-      }
-      const actor = document.querySelector('.scene-actor.player');
-      if (actor) actor.classList.add('running');
-      const nextScreen = MAPS[nextScreenId];
-      setTimeout(() => {
-        character.mapKey = nextScreenId;
-        character.mapId = nextScreen?.name || character.mapId;
-        character.localX = direction === 'right' ? 0 : direction === 'left' ? LOCAL_SCREEN_SIZE - 1 : 2;
-        character.localY = direction === 'down' ? 0 : direction === 'up' ? LOCAL_SCREEN_SIZE - 1 : 2;
-        setMessage('worldMessage', `Tu arrives sur ${character.mapId}.`, 'ok');
-        renderWorldPreview();
-      }, 140);
+      setMessage('worldMessage', `La beta actuelle reste sur une seule carte jouable. Direction ${direction} désactivée pour l’instant.`, 'error');
     }
 
 
@@ -1905,12 +1892,14 @@
       const equipment = character.equipment || { arme: null, amulette: null, cape: null };
       const inventoryEntries = Object.entries(character.inventory || {}).filter(([, qty]) => qty > 0).slice(0, 6);
       const attrs = character.attributes || {};
-      const classData = game?.classes?.[character.class] || game?.classes?.warrior || { name: character.class || 'Classe', stats: { ap: 0, mp: 0 }, skill: { name: 'Compétence', element: 'neutre' } };
+      character.class = 'warrior';
+      const classData = game?.classes?.warrior || { name: 'Guerrier', stats: { ap: 0, mp: 0 }, skill: { name: 'Compétence', element: 'neutre' } };
       panel.innerHTML = `
         <div class="hud-card">
           <div class="hud-title"><strong>${character.name}</strong><span class="badge">Niv. ${character.level || 1}</span></div>
           <div class="badge-row">
-            <span class="badge">${classData.name}</span>
+            <span class="badge">Guerrier beta</span>
+            <span class="badge">Map unique</span>
             <span class="badge">XP ${character.xp || 0}</span>
             <span class="badge">PA ${classData.stats.ap}</span>
             <span class="badge">PM ${classData.stats.mp}</span>
@@ -1970,7 +1959,9 @@
       const decor = SCREEN_DECOR[mapKey] || { landmarks: {}, npcs: [] };
       const playerLeft = 18 + ((character.localX ?? 2) * 16);
       const playerTop = 28 + ((character.localY ?? 2) * 12);
-      const actorNodes = [`<div class="scene-actor player" style="left:${playerLeft}%;top:${playerTop}%;"><button data-scene-type="player" data-name="${character.name}" data-map="${character.mapId}"><div class="scene-sprite">🧍</div><div class="scene-label">${character.name}</div></button></div>`];
+      const facingSprite = { up: '⬆️', down: '⬇️', left: '⬅️', right: '➡️', upRight: '↗️', upLeft: '↖️', downRight: '↘️', downLeft: '↙️' };
+      const spriteFace = facingSprite[character.facing || 'down'] || '⬇️';
+      const actorNodes = [`<div class="scene-actor player" style="left:${playerLeft}%;top:${playerTop}%;"><button data-scene-type="player" data-name="${character.name}" data-map="${character.mapId}"><div class="scene-sprite">${spriteFace}</div><div class="scene-label">${character.name}</div></button></div>`];
       const landmarkPositions = illustratedMapState.landmarkPositions[mapKey] || {};
       Object.entries(decor.landmarks || {}).forEach(([pos, landmark]) => {
         const fallback = { x: 18, y: 40 };
