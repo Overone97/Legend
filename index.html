@@ -530,7 +530,7 @@
             <div class="scene-floor"></div>
           </div>
         </div>
-        <div class="panel create-card">
+        <div class="panel create-card" style="display:none;">
           <h3>Interface de jeu</h3>
           <div class="hud-panel" id="gameHudPanel"></div>
         </div>
@@ -1627,8 +1627,8 @@
         if (!selected) return setMessage('characterMessage', 'Sélectionne un personnage.');
         game.setCharacter(selected);
         document.getElementById('shellStatus').textContent = `Personnage actif : ${selected.name} (${selected.class})`;
-        switchView('combatView');
-        game.updateHUD();
+        switchView('worldView');
+        renderWorldPreview();
       };
     }
 
@@ -2049,7 +2049,7 @@
         renderWorldGrid();
         return;
       }
-      setMessage('worldMessage', 'Beta mono-map active. Clique sur la carte pour te déplacer.', 'ok');
+      setMessage('worldMessage', '', 'ok');
       renderMainScene();
       renderGameHud();
       renderWorldGrid();
