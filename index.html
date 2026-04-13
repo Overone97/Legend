@@ -226,6 +226,13 @@
       mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 16%, rgba(0,0,0,0.9) 86%, transparent 100%);
       opacity: 0.45;
     }
+    .scene-grid.combat-mode {
+      z-index: 2;
+      background-image:
+        linear-gradient(rgba(248,113,113,0.28) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(248,113,113,0.28) 1px, transparent 1px);
+      opacity: 0.9;
+    }
     .scene-actors { position: absolute; inset: 0; z-index: 3; }
     .scene-actor { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 6px; transition: left 0.28s ease-out, top 0.28s ease-out; }
     .scene-actor.player { z-index: 5; }
@@ -542,7 +549,7 @@
           <div class="scene-canvas" id="sceneCanvas">
             <div class="scene-backdrop" id="sceneBackdrop"></div>
             <div class="scene-overlay"></div>
-            <div class="scene-grid"></div>
+            <div class="scene-grid" id="sceneGrid"></div>
             <div class="illustrated-map-hitbox" id="sceneHitbox"></div>
             <div class="scene-actors" id="sceneActors"></div>
             <div class="dialog-box" id="sceneDialog" style="display:none;"></div>
@@ -693,6 +700,7 @@
       enemyByMap: {
         'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 9, y: 7, encounterKey: 'bosquet-trouble' }],
       },
+      combat: { active: false, encounterKey: null, enemy: null },
       npcPositions: {
         'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
         'atelier-ville': [{ name: 'Borin', x: 62, y: 52 }],
@@ -2050,6 +2058,7 @@
       const backdrop = document.getElementById('sceneBackdrop');
       const actors = document.getElementById('sceneActors');
       const hitbox = document.getElementById('sceneHitbox');
+      const sceneGrid = document.getElementById('sceneGrid');
       if (!character) {
         backdrop.style.background = SCENE_BACKDROPS.safe;
         actors.innerHTML = '<div class="scene-actor player" style="left:50%;top:60%;"><div class="scene-sprite">🧍</div><div class="scene-label">Choisis un personnage</div></div>';
@@ -2080,30 +2089,39 @@
         character.sceneLeft = spawnPos.left;
         character.sceneTop = spawnPos.top;
       }
-      const enemies = illustratedMapState.enemyByMap[mapKey] || [];
+      const enemies = illustratedMapState.combat.active && illustratedMapState.combat.enemy
+        ? [illustratedMapState.combat.enemy]
+        : (illustratedMapState.enemyByMap[mapKey] || []);
       enemies.forEach(enemy => {
         const enemyPos = typeof enemy.x === 'number' && enemy.x <= BETA_GRID.cols - 1 && typeof enemy.y === 'number' && enemy.y <= BETA_GRID.rows - 1
           ? gridCellToScenePosition(enemy.x, enemy.y)
           : { left: enemy.x, top: enemy.y };
-        actorNodes.push(`<div class="scene-enemy" style="left:${enemyPos.left}%;top:${enemyPos.top}%;"><button data-encounter-key="${enemy.encounterKey}"><div class="scene-sprite"><div class="enemy-sprite"><div class="enemy-shadow"></div><div class="enemy-head"></div><div class="enemy-body"></div><div class="enemy-leg left"></div><div class="enemy-leg right"></div></div></div><div class="scene-label">${enemy.name}</div></button></div>`);
+        actorNodes.push(`<div class="scene-enemy" style="left:${enemyPos.left}%;top:${enemyPos.top}%;"><button data-encounter-key="${enemy.encounterKey}"><div class="scene-sprite"><div class="enemy-sprite"><div class="enemy-shadow"></div><div class="enemy-head"></div><div class="enemy-body"></div><div class="enemy-leg left"></div><div class="enemy-leg right"></div></div></div><div class="scene-label">${illustratedMapState.combat.active ? 'En combat' : enemy.name}</div></button></div>`);
       });
       actors.innerHTML = actorNodes.join('');
       actors.querySelectorAll('[data-scene-type]').forEach(node => node.addEventListener('click', () => inspectSceneElement(node.dataset.sceneType, { name: node.dataset.name, mapId: node.dataset.map, label: node.dataset.label, role: node.dataset.role, hint: node.dataset.hint, type: node.dataset.role, action: node.dataset.action })));
       actors.querySelectorAll('[data-encounter-key]').forEach(node => node.addEventListener('click', () => {
         const encounter = ENCOUNTER_CONFIG[node.dataset.encounterKey];
         if (!encounter) return;
-        setMessage('worldMessage', `Tu engages ${encounter.name}.`, 'error');
-        game.setCharacter(character);
-        switchView('combatView');
-        game.startBattle(encounter);
+        illustratedMapState.combat.active = true;
+        illustratedMapState.combat.encounterKey = node.dataset.encounterKey;
+        illustratedMapState.combat.enemy = { name: encounter.name, x: 8, y: 4, encounterKey: node.dataset.encounterKey };
+        sceneGrid.classList.add('combat-mode');
+        setMessage('worldMessage', `Combat engagé contre ${encounter.name} sur la même carte.`, 'error');
+        renderMainScene();
       }));
       hitbox.innerHTML = '';
+      if (illustratedMapState.combat.active) {
+        sceneGrid.classList.add('combat-mode');
+      } else {
+        sceneGrid.classList.remove('combat-mode');
+      }
       hitbox.onclick = event => {
         if (event.target.closest('button')) return;
         const rect = event.currentTarget.getBoundingClientRect();
         const targetLeft = Math.max(12, Math.min(88, ((event.clientX - rect.left) / rect.width) * 100));
         const targetTop = Math.max(22, Math.min(82, ((event.clientY - rect.top) / rect.height) * 100));
-        setMessage('worldMessage', `${character.name} marche vers le point cliqué.`, 'ok');
+        setMessage('worldMessage', illustratedMapState.combat.active ? `${character.name} se replace en combat.` : `${character.name} marche vers le point cliqué.`, 'ok');
         movePlayerToScenePercent(targetLeft, targetTop);
       };
       renderSceneDialog();
