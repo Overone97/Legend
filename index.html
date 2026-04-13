@@ -212,7 +212,20 @@
     }
     .scene-parallax, .scene-illustration { position: absolute; inset: 0; }
     .scene-illustration-layer { position: absolute; pointer-events: none; }
-    .scene-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,23,42,0.1), rgba(15,23,42,0.35)); }
+    .scene-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,23,42,0.08), rgba(15,23,42,0.28)); }
+    .scene-grid {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
+      background-size: calc((100% - 20%) / 11) calc((100% - 30%) / 11);
+      background-position: 10% 18%;
+      mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 16%, rgba(0,0,0,0.9) 86%, transparent 100%);
+      opacity: 0.45;
+    }
     .scene-actors { position: absolute; inset: 0; z-index: 3; }
     .scene-actor { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 6px; transition: left 0.28s ease-out, top 0.28s ease-out; }
     .scene-actor.player { z-index: 5; }
@@ -529,6 +542,7 @@
           <div class="scene-canvas" id="sceneCanvas">
             <div class="scene-backdrop" id="sceneBackdrop"></div>
             <div class="scene-overlay"></div>
+            <div class="scene-grid"></div>
             <div class="illustrated-map-hitbox" id="sceneHitbox"></div>
             <div class="scene-actors" id="sceneActors"></div>
             <div class="dialog-box" id="sceneDialog" style="display:none;"></div>
@@ -677,7 +691,7 @@
     const dialogState = { visible: false, title: '', body: '', actions: [] };
     const illustratedMapState = {
       enemyByMap: {
-        'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 76, y: 60, encounterKey: 'bosquet-trouble' }],
+        'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 9, y: 7, encounterKey: 'bosquet-trouble' }],
       },
       npcPositions: {
         'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
@@ -2068,7 +2082,10 @@
       }
       const enemies = illustratedMapState.enemyByMap[mapKey] || [];
       enemies.forEach(enemy => {
-        actorNodes.push(`<div class="scene-enemy" style="left:${enemy.x}%;top:${enemy.y}%;"><button data-encounter-key="${enemy.encounterKey}"><div class="scene-sprite"><div class="enemy-sprite"><div class="enemy-shadow"></div><div class="enemy-head"></div><div class="enemy-body"></div><div class="enemy-leg left"></div><div class="enemy-leg right"></div></div></div><div class="scene-label">${enemy.name}</div></button></div>`);
+        const enemyPos = typeof enemy.x === 'number' && enemy.x <= BETA_GRID.cols - 1 && typeof enemy.y === 'number' && enemy.y <= BETA_GRID.rows - 1
+          ? gridCellToScenePosition(enemy.x, enemy.y)
+          : { left: enemy.x, top: enemy.y };
+        actorNodes.push(`<div class="scene-enemy" style="left:${enemyPos.left}%;top:${enemyPos.top}%;"><button data-encounter-key="${enemy.encounterKey}"><div class="scene-sprite"><div class="enemy-sprite"><div class="enemy-shadow"></div><div class="enemy-head"></div><div class="enemy-body"></div><div class="enemy-leg left"></div><div class="enemy-leg right"></div></div></div><div class="scene-label">${enemy.name}</div></button></div>`);
       });
       actors.innerHTML = actorNodes.join('');
       actors.querySelectorAll('[data-scene-type]').forEach(node => node.addEventListener('click', () => inspectSceneElement(node.dataset.sceneType, { name: node.dataset.name, mapId: node.dataset.map, label: node.dataset.label, role: node.dataset.role, hint: node.dataset.hint, type: node.dataset.role, action: node.dataset.action })));
