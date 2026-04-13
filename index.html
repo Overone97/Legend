@@ -370,6 +370,21 @@
       backdrop-filter: blur(8px);
     }
     .combat-overlay-hud.visible { display: grid; }
+    .scene-path-cell {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      transform: translate(-50%, -50%);
+      border-radius: 6px;
+      background: rgba(96,165,250,0.32);
+      border: 1px solid rgba(191,219,254,0.65);
+      z-index: 4;
+      pointer-events: none;
+    }
+    .scene-path-cell.reachable {
+      background: rgba(74,222,128,0.18);
+      border-color: rgba(134,239,172,0.55);
+    }
     .dialog-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .world-scene {
       display: grid;
@@ -566,6 +581,7 @@
             <div class="scene-grid" id="sceneGrid"></div>
             <div class="illustrated-map-hitbox" id="sceneHitbox"></div>
             <div class="scene-actors" id="sceneActors"></div>
+            <div id="scenePathOverlay"></div>
             <div class="combat-overlay-hud" id="combatOverlayHud"></div>
             <div class="dialog-box" id="sceneDialog" style="display:none;"></div>
             <div class="scene-floor"></div>
@@ -715,7 +731,7 @@
       enemyByMap: {
         'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 9, y: 7, encounterKey: 'bosquet-trouble' }],
       },
-      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3 },
+      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, phase: 'placement', reachableCells: [], previewPath: [], timerId: null },
       npcPositions: {
         'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
         'atelier-ville': [{ name: 'Borin', x: 62, y: 52 }],
@@ -1900,6 +1916,39 @@
       return { col, row };
     }
 
+    function buildCellPath(startCol, startRow, targetCol, targetRow, maxSteps = Infinity) {
+      const path = [];
+      let currentCol = startCol;
+      let currentRow = startRow;
+      while ((currentCol !== targetCol || currentRow !== targetRow) && path.length < maxSteps) {
+        if (currentCol < targetCol) currentCol += 1;
+        else if (currentCol > targetCol) currentCol -= 1;
+        else if (currentRow < targetRow) currentRow += 1;
+        else if (currentRow > targetRow) currentRow -= 1;
+        path.push({ col: currentCol, row: currentRow });
+      }
+      return path;
+    }
+
+    function refreshCombatTimer() {
+      if (!illustratedMapState.combat.active) return;
+      clearInterval(illustratedMapState.combat.timerId);
+      illustratedMapState.combat.timer = 15;
+      illustratedMapState.combat.timerId = setInterval(() => {
+        illustratedMapState.combat.timer -= 1;
+        if (illustratedMapState.combat.timer <= 0) {
+          clearInterval(illustratedMapState.combat.timerId);
+          illustratedMapState.combat.turn += 1;
+          illustratedMapState.combat.ap = 6;
+          illustratedMapState.combat.mp = 3;
+          illustratedMapState.combat.previewPath = [];
+          setMessage('worldMessage', 'Temps écoulé, tour passé.', 'error');
+          refreshCombatTimer();
+        }
+        renderMainScene();
+      }, 1000);
+    }
+
     function movePlayerToScenePercent(targetLeft, targetTop, callback = null) {
       const character = game.currentCharacter;
       if (!character) return;
@@ -1908,16 +1957,8 @@
         col: character.gridCol ?? scenePositionToGridCell(character.sceneLeft ?? 52, character.sceneTop ?? 67).col,
         row: character.gridRow ?? scenePositionToGridCell(character.sceneLeft ?? 52, character.sceneTop ?? 67).row,
       };
-      const path = [];
-      let currentCol = startCell.col;
-      let currentRow = startCell.row;
-      while (currentCol !== targetCell.col || currentRow !== targetCell.row) {
-        if (currentCol < targetCell.col) currentCol += 1;
-        else if (currentCol > targetCell.col) currentCol -= 1;
-        if (currentRow < targetCell.row) currentRow += 1;
-        else if (currentRow > targetCell.row) currentRow -= 1;
-        path.push({ col: currentCol, row: currentRow });
-      }
+      const maxSteps = illustratedMapState.combat.active ? (illustratedMapState.combat.phase === 'placement' ? 3 : illustratedMapState.combat.mp) : Infinity;
+      const path = buildCellPath(startCell.col, startCell.row, targetCell.col, targetCell.row, maxSteps);
       character.movePath = path;
       character.moveTarget = { callback };
       if (character.isMoving) return;
@@ -1937,6 +1978,9 @@
         const currentLeft = character.sceneLeft ?? 52;
         const currentTop = character.sceneTop ?? 67;
         const nextPos = gridCellToScenePosition(nextCell.col, nextCell.row);
+        if (illustratedMapState.combat.active && illustratedMapState.combat.phase !== 'placement') {
+          illustratedMapState.combat.mp = Math.max(0, illustratedMapState.combat.mp - 1);
+        }
         character.facing = getFacingDirection(currentLeft, currentTop, nextPos.left, nextPos.top, character.facing || 'down');
         character.gridCol = nextCell.col;
         character.gridRow = nextCell.row;
@@ -2075,6 +2119,7 @@
       const hitbox = document.getElementById('sceneHitbox');
       const sceneGrid = document.getElementById('sceneGrid');
       const combatOverlayHud = document.getElementById('combatOverlayHud');
+      const scenePathOverlay = document.getElementById('scenePathOverlay');
       if (!character) {
         backdrop.style.background = SCENE_BACKDROPS.safe;
         actors.innerHTML = '<div class="scene-actor player" style="left:50%;top:60%;"><div class="scene-sprite">🧍</div><div class="scene-label">Choisis un personnage</div></div>';
@@ -2124,9 +2169,13 @@
         illustratedMapState.combat.turn = 1;
         illustratedMapState.combat.ap = 6;
         illustratedMapState.combat.mp = 3;
+        illustratedMapState.combat.phase = 'placement';
         illustratedMapState.combat.enemy = { name: encounter.name, x: 8, y: 4, encounterKey: node.dataset.encounterKey };
+        illustratedMapState.combat.reachableCells = [{ col: 5, row: 7 }, { col: 6, row: 7 }, { col: 7, row: 7 }, { col: 5, row: 8 }, { col: 6, row: 8 }, { col: 7, row: 8 }, { col: 5, row: 9 }, { col: 6, row: 9 }, { col: 7, row: 9 }];
+        illustratedMapState.combat.previewPath = [];
         sceneGrid.classList.add('combat-mode');
-        setMessage('worldMessage', `Combat engagé contre ${encounter.name} sur la même carte.`, 'error');
+        refreshCombatTimer();
+        setMessage('worldMessage', `Place ton personnage avant le combat contre ${encounter.name}.`, 'error');
         renderMainScene();
       }));
       hitbox.innerHTML = '';
@@ -2134,8 +2183,9 @@
         sceneGrid.classList.add('combat-mode');
         combatOverlayHud.classList.add('visible');
         combatOverlayHud.innerHTML = `
-          <strong>Combat en cours</strong>
+          <strong>${illustratedMapState.combat.phase === 'placement' ? 'Placement' : 'Combat en cours'}</strong>
           <span>Tour ${illustratedMapState.combat.turn}</span>
+          <span>Timer ${illustratedMapState.combat.timer}s</span>
           <span>PA ${illustratedMapState.combat.ap}</span>
           <span>PM ${illustratedMapState.combat.mp}</span>
           <span>Ennemi ${illustratedMapState.combat.enemy?.name || 'Bandit'}</span>
@@ -2144,13 +2194,40 @@
         sceneGrid.classList.remove('combat-mode');
         combatOverlayHud.classList.remove('visible');
         combatOverlayHud.innerHTML = '';
+        scenePathOverlay.innerHTML = '';
       }
+      hitbox.onmousemove = event => {
+        if (!illustratedMapState.combat.active) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const targetLeft = Math.max(12, Math.min(88, ((event.clientX - rect.left) / rect.width) * 100));
+        const targetTop = Math.max(22, Math.min(82, ((event.clientY - rect.top) / rect.height) * 100));
+        const hoverCell = scenePositionToGridCell(targetLeft, targetTop);
+        const startCol = character.gridCol ?? 6;
+        const startRow = character.gridRow ?? 8;
+        const limit = illustratedMapState.combat.phase === 'placement' ? 3 : illustratedMapState.combat.mp;
+        illustratedMapState.combat.previewPath = buildCellPath(startCol, startRow, hoverCell.col, hoverCell.row, limit);
+        scenePathOverlay.innerHTML = [
+          ...(illustratedMapState.combat.reachableCells || []).map(cell => {
+            const pos = gridCellToScenePosition(cell.col, cell.row);
+            return `<div class="scene-path-cell reachable" style="left:${pos.left}%;top:${pos.top}%;"></div>`;
+          }),
+          ...(illustratedMapState.combat.previewPath || []).map(cell => {
+            const pos = gridCellToScenePosition(cell.col, cell.row);
+            return `<div class="scene-path-cell" style="left:${pos.left}%;top:${pos.top}%;"></div>`;
+          })
+        ].join('');
+      };
       hitbox.onclick = event => {
         if (event.target.closest('button')) return;
         const rect = event.currentTarget.getBoundingClientRect();
         const targetLeft = Math.max(12, Math.min(88, ((event.clientX - rect.left) / rect.width) * 100));
         const targetTop = Math.max(22, Math.min(82, ((event.clientY - rect.top) / rect.height) * 100));
-        setMessage('worldMessage', illustratedMapState.combat.active ? `${character.name} se replace en combat.` : `${character.name} marche vers le point cliqué.`, 'ok');
+        if (illustratedMapState.combat.active && illustratedMapState.combat.phase === 'placement') {
+          illustratedMapState.combat.phase = 'combat';
+          setMessage('worldMessage', `${character.name} prend sa position de départ.`, 'ok');
+        } else {
+          setMessage('worldMessage', illustratedMapState.combat.active ? `${character.name} se déplace pendant son tour.` : `${character.name} marche vers le point cliqué.`, 'ok');
+        }
         movePlayerToScenePercent(targetLeft, targetTop);
       };
       renderSceneDialog();
