@@ -731,7 +731,7 @@
       enemyByMap: {
         'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 9, y: 7, encounterKey: 'bosquet-trouble' }],
       },
-      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, phase: 'placement', reachableCells: [], previewPath: [], timerId: null },
+      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, phase: 'placement', reachableCells: [], previewPath: [], timerId: null, currentSide: 'player', enemyAp: 4, enemyMp: 2 },
       npcPositions: {
         'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
         'atelier-ville': [{ name: 'Borin', x: 62, y: 52 }],
@@ -1930,20 +1930,65 @@
       return path;
     }
 
-    function refreshCombatTimer() {
+    function beginPlayerTurn() {
+      illustratedMapState.combat.currentSide = 'player';
+      illustratedMapState.combat.turn += 1;
+      illustratedMapState.combat.ap = 6;
+      illustratedMapState.combat.mp = 3;
+      illustratedMapState.combat.timer = 15;
+      illustratedMapState.combat.previewPath = [];
+      refreshCombatTimer();
+      setMessage('worldMessage', 'Ton tour commence.', 'ok');
+      renderMainScene();
+    }
+
+    function runEnemyTurn() {
+      if (!illustratedMapState.combat.active || !game.currentCharacter || !illustratedMapState.combat.enemy) return;
+      clearInterval(illustratedMapState.combat.timerId);
+      illustratedMapState.combat.currentSide = 'enemy';
+      illustratedMapState.combat.timer = 0;
+      illustratedMapState.combat.previewPath = [];
+      const character = game.currentCharacter;
+      const enemy = illustratedMapState.combat.enemy;
+      const path = buildCellPath(enemy.x, enemy.y, character.gridCol ?? 6, character.gridRow ?? 8, illustratedMapState.combat.enemyMp);
+      const lastStep = path[path.length - 1];
+      if (lastStep) {
+        enemy.x = lastStep.col;
+        enemy.y = lastStep.row;
+      }
+      renderMainScene();
+      setTimeout(() => {
+        const distance = Math.abs((enemy.x ?? 0) - (character.gridCol ?? 0)) + Math.abs((enemy.y ?? 0) - (character.gridRow ?? 0));
+        if (distance <= 1) {
+          character.hp = Math.max(0, (character.hp ?? 100) - 8);
+          setMessage('worldMessage', `${enemy.name} te frappe pour 8 dégâts.`, 'error');
+        } else {
+          setMessage('worldMessage', `${enemy.name} avance vers toi.`, 'error');
+        }
+        beginPlayerTurn();
+      }, 700);
+    }
+
+    function endPlayerTurn(reason = 'Tour terminé.') {
       if (!illustratedMapState.combat.active) return;
+      clearInterval(illustratedMapState.combat.timerId);
+      illustratedMapState.combat.previewPath = [];
+      illustratedMapState.combat.ap = 0;
+      illustratedMapState.combat.mp = 0;
+      setMessage('worldMessage', reason, 'ok');
+      runEnemyTurn();
+    }
+
+    function refreshCombatTimer() {
+      if (!illustratedMapState.combat.active || illustratedMapState.combat.currentSide !== 'player') return;
       clearInterval(illustratedMapState.combat.timerId);
       illustratedMapState.combat.timer = 15;
       illustratedMapState.combat.timerId = setInterval(() => {
         illustratedMapState.combat.timer -= 1;
         if (illustratedMapState.combat.timer <= 0) {
           clearInterval(illustratedMapState.combat.timerId);
-          illustratedMapState.combat.turn += 1;
-          illustratedMapState.combat.ap = 6;
-          illustratedMapState.combat.mp = 3;
-          illustratedMapState.combat.previewPath = [];
-          setMessage('worldMessage', 'Temps écoulé, tour passé.', 'error');
-          refreshCombatTimer();
+          endPlayerTurn('Temps écoulé, tour passé.');
+          return;
         }
         renderMainScene();
       }, 1000);
@@ -1957,7 +2002,7 @@
         col: character.gridCol ?? scenePositionToGridCell(character.sceneLeft ?? 52, character.sceneTop ?? 67).col,
         row: character.gridRow ?? scenePositionToGridCell(character.sceneLeft ?? 52, character.sceneTop ?? 67).row,
       };
-      const maxSteps = illustratedMapState.combat.active ? (illustratedMapState.combat.phase === 'placement' ? 3 : illustratedMapState.combat.mp) : Infinity;
+      const maxSteps = illustratedMapState.combat.active ? (illustratedMapState.combat.phase === 'placement' ? 3 : (illustratedMapState.combat.currentSide === 'player' ? illustratedMapState.combat.mp : 0)) : Infinity;
       const path = buildCellPath(startCell.col, startCell.row, targetCell.col, targetCell.row, maxSteps);
       character.movePath = path;
       character.moveTarget = { callback };
@@ -1978,7 +2023,7 @@
         const currentLeft = character.sceneLeft ?? 52;
         const currentTop = character.sceneTop ?? 67;
         const nextPos = gridCellToScenePosition(nextCell.col, nextCell.row);
-        if (illustratedMapState.combat.active && illustratedMapState.combat.phase !== 'placement') {
+        if (illustratedMapState.combat.active && illustratedMapState.combat.phase !== 'placement' && illustratedMapState.combat.currentSide === 'player') {
           illustratedMapState.combat.mp = Math.max(0, illustratedMapState.combat.mp - 1);
         }
         character.facing = getFacingDirection(currentLeft, currentTop, nextPos.left, nextPos.top, character.facing || 'down');
@@ -2170,6 +2215,9 @@
         illustratedMapState.combat.ap = 6;
         illustratedMapState.combat.mp = 3;
         illustratedMapState.combat.phase = 'placement';
+        illustratedMapState.combat.currentSide = 'player';
+        illustratedMapState.combat.enemyAp = 4;
+        illustratedMapState.combat.enemyMp = 2;
         illustratedMapState.combat.enemy = { name: encounter.name, x: 8, y: 4, encounterKey: node.dataset.encounterKey };
         illustratedMapState.combat.reachableCells = [{ col: 5, row: 7 }, { col: 6, row: 7 }, { col: 7, row: 7 }, { col: 5, row: 8 }, { col: 6, row: 8 }, { col: 7, row: 8 }, { col: 5, row: 9 }, { col: 6, row: 9 }, { col: 7, row: 9 }];
         illustratedMapState.combat.previewPath = [];
@@ -2185,7 +2233,8 @@
         combatOverlayHud.innerHTML = `
           <strong>${illustratedMapState.combat.phase === 'placement' ? 'Placement' : 'Combat en cours'}</strong>
           <span>Tour ${illustratedMapState.combat.turn}</span>
-          <span>Timer ${illustratedMapState.combat.timer}s</span>
+          <span>Actif ${illustratedMapState.combat.currentSide === 'player' ? 'joueur' : 'ennemi'}</span>
+          <span>Timer ${illustratedMapState.combat.currentSide === 'player' ? illustratedMapState.combat.timer : '...'}s</span>
           <span>PA ${illustratedMapState.combat.ap}</span>
           <span>PM ${illustratedMapState.combat.mp}</span>
           <span>Ennemi ${illustratedMapState.combat.enemy?.name || 'Bandit'}</span>
@@ -2204,7 +2253,7 @@
         const hoverCell = scenePositionToGridCell(targetLeft, targetTop);
         const startCol = character.gridCol ?? 6;
         const startRow = character.gridRow ?? 8;
-        const limit = illustratedMapState.combat.phase === 'placement' ? 3 : illustratedMapState.combat.mp;
+        const limit = illustratedMapState.combat.phase === 'placement' ? 3 : (illustratedMapState.combat.currentSide === 'player' ? illustratedMapState.combat.mp : 0);
         illustratedMapState.combat.previewPath = buildCellPath(startCol, startRow, hoverCell.col, hoverCell.row, limit);
         scenePathOverlay.innerHTML = [
           ...(illustratedMapState.combat.reachableCells || []).map(cell => {
@@ -2224,11 +2273,20 @@
         const targetTop = Math.max(22, Math.min(82, ((event.clientY - rect.top) / rect.height) * 100));
         if (illustratedMapState.combat.active && illustratedMapState.combat.phase === 'placement') {
           illustratedMapState.combat.phase = 'combat';
+          illustratedMapState.combat.turn = 0;
           setMessage('worldMessage', `${character.name} prend sa position de départ.`, 'ok');
-        } else {
-          setMessage('worldMessage', illustratedMapState.combat.active ? `${character.name} se déplace pendant son tour.` : `${character.name} marche vers le point cliqué.`, 'ok');
+          movePlayerToScenePercent(targetLeft, targetTop, () => beginPlayerTurn());
+          return;
         }
-        movePlayerToScenePercent(targetLeft, targetTop);
+        if (illustratedMapState.combat.active && illustratedMapState.combat.currentSide !== 'player') {
+          return;
+        }
+        setMessage('worldMessage', illustratedMapState.combat.active ? `${character.name} se déplace pendant son tour.` : `${character.name} marche vers le point cliqué.`, 'ok');
+        movePlayerToScenePercent(targetLeft, targetTop, () => {
+          if (illustratedMapState.combat.active && illustratedMapState.combat.phase === 'combat' && illustratedMapState.combat.mp <= 0) {
+            endPlayerTurn('Déplacement terminé, plus de PM.');
+          }
+        });
       };
       renderSceneDialog();
     }
