@@ -753,7 +753,7 @@
       enemyByMap: {
         'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 9, y: 7, encounterKey: 'bosquet-trouble' }],
       },
-      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, phase: 'placement', reachableCells: [], previewPath: [], rangeCells: [], timerId: null, currentSide: 'player', enemyAp: 4, enemyMp: 2, selectedSpell: 'jab' },
+      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, phase: 'placement', reachableCells: [], previewPath: [], rangeCells: [], timerId: null, currentSide: 'player', enemyAp: 4, enemyMp: 2, selectedSpell: 'jab', rewardPending: null },
       npcPositions: {
         'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
         'atelier-ville': [{ name: 'Borin', x: 62, y: 52 }],
@@ -1980,6 +1980,44 @@
       return Math.abs((enemy.x ?? 0) - (character.gridCol ?? 0)) + Math.abs((enemy.y ?? 0) - (character.gridRow ?? 0));
     }
 
+    function finishInMapCombatVictory() {
+      const character = game.currentCharacter;
+      const reward = illustratedMapState.combat.rewardPending || { xp: 18, loot: { bois_sombre: 1 } };
+      if (!character) return;
+      character.xp = (character.xp || 0) + (reward.xp || 0);
+      character.inventory = character.inventory || {};
+      Object.entries(reward.loot || {}).forEach(([key, qty]) => {
+        character.inventory[key] = (character.inventory[key] || 0) + qty;
+      });
+      clearInterval(illustratedMapState.combat.timerId);
+      illustratedMapState.combat.active = false;
+      illustratedMapState.combat.phase = 'placement';
+      illustratedMapState.combat.previewPath = [];
+      illustratedMapState.combat.reachableCells = [];
+      illustratedMapState.combat.rangeCells = [];
+      illustratedMapState.combat.rewardPending = null;
+      const currentMap = character.mapKey || BETA_SINGLE_MAP;
+      illustratedMapState.enemyByMap[currentMap] = (illustratedMapState.enemyByMap[currentMap] || []).filter(enemy => enemy.encounterKey !== illustratedMapState.combat.encounterKey);
+      illustratedMapState.combat.enemy = null;
+      setMessage('worldMessage', `Victoire. +${reward.xp || 0} XP, butin récupéré.`, 'ok');
+      renderWorldPreview();
+    }
+
+    function finishInMapCombatDefeat() {
+      const character = game.currentCharacter;
+      clearInterval(illustratedMapState.combat.timerId);
+      illustratedMapState.combat.active = false;
+      illustratedMapState.combat.phase = 'placement';
+      illustratedMapState.combat.previewPath = [];
+      illustratedMapState.combat.reachableCells = [];
+      illustratedMapState.combat.rangeCells = [];
+      illustratedMapState.combat.rewardPending = null;
+      illustratedMapState.combat.enemy = null;
+      if (character) character.hp = 100;
+      setMessage('worldMessage', 'Défaite. Tu reprends ton souffle sur la carte.', 'error');
+      renderWorldPreview();
+    }
+
     function tryCastSelectedSpell() {
       if (!illustratedMapState.combat.active || illustratedMapState.combat.currentSide !== 'player' || illustratedMapState.combat.phase !== 'combat') return;
       const spell = PLAYER_COMBAT_SPELLS[illustratedMapState.combat.selectedSpell] || PLAYER_COMBAT_SPELLS.jab;
@@ -2000,14 +2038,8 @@
       enemy.hp = Math.max(0, (enemy.hp ?? 40) - spell.damage);
       setMessage('worldMessage', `${spell.name} touche ${enemy.name} pour ${spell.damage} dégâts.`, 'ok');
       if (enemy.hp <= 0) {
-        clearInterval(illustratedMapState.combat.timerId);
-        illustratedMapState.combat.active = false;
-        illustratedMapState.combat.phase = 'placement';
-        illustratedMapState.combat.previewPath = [];
-        illustratedMapState.combat.reachableCells = [];
-        illustratedMapState.combat.enemy = null;
-        setMessage('worldMessage', 'Combat gagné.', 'ok');
-        renderWorldPreview();
+        illustratedMapState.combat.rewardPending = { xp: 18, loot: { bois_sombre: 1, fer_use: 1 } };
+        finishInMapCombatVictory();
         return;
       }
       if (illustratedMapState.combat.ap <= 0) {
@@ -2048,6 +2080,10 @@
         const distance = Math.abs((enemy.x ?? 0) - (character.gridCol ?? 0)) + Math.abs((enemy.y ?? 0) - (character.gridRow ?? 0));
         if (distance <= 1) {
           character.hp = Math.max(0, (character.hp ?? 100) - 8);
+          if ((character.hp ?? 0) <= 0) {
+            finishInMapCombatDefeat();
+            return;
+          }
           setMessage('worldMessage', `${enemy.name} te frappe pour 8 dégâts.`, 'error');
         } else {
           setMessage('worldMessage', `${enemy.name} avance vers toi.`, 'error');
@@ -2198,6 +2234,7 @@
       }
       const equipment = character.equipment || { arme: null, amulette: null, cape: null };
       const inventoryEntries = Object.entries(character.inventory || {}).filter(([, qty]) => qty > 0).slice(0, 6);
+      const currentHp = character.hp ?? 100;
       const attrs = character.attributes || {};
       character.class = 'warrior';
       const classData = game?.classes?.warrior || { name: 'Guerrier', stats: { ap: 0, mp: 0 }, skill: { name: 'Compétence', element: 'neutre' } };
@@ -2208,6 +2245,7 @@
             <span class="badge">Guerrier beta</span>
             <span class="badge">Map unique</span>
             <span class="badge">XP ${character.xp || 0}</span>
+            <span class="badge">HP ${currentHp}</span>
             <span class="badge">PA ${classData.stats.ap}</span>
             <span class="badge">PM ${classData.stats.mp}</span>
           </div>
