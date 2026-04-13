@@ -613,62 +613,14 @@
             <div class="scene-floor"></div>
           </div>
         </div>
-        <div class="panel create-card" style="display:none;">
-          <h3>Interface de jeu</h3>
+        <div class="panel create-card">
+          <h3>Prototype neuf</h3>
           <div class="hud-panel" id="gameHudPanel"></div>
         </div>
       </div>
     </div>
 
-    <div class="view" id="combatView">
-      <div class="app">
-        <aside class="panel">
-          <h1 style="margin:0;font-size:28px;">Legend</h1>
-          <p class="subtitle">Prototype tactique — maintenant branché à un menu compte/personnages.</p>
-
-          <div class="section">
-            <h3>Classe active</h3>
-            <div class="class-grid" id="classGrid"></div>
-            <button id="startBtn">Lancer le combat</button>
-          </div>
-
-          <div class="section">
-            <h3>Commandes</h3>
-            <p class="hint">Clique une case bleue pour te déplacer. Clique l’ennemi dans la portée pour lancer ton sort. Fin de tour auto ou bouton dédié.</p>
-            <button id="endTurnBtn" class="secondary">Terminer le tour</button>
-          </div>
-        </aside>
-
-        <main class="panel">
-          <div class="turn-banner">
-            <span id="turnIndicator">Prépare ta partie</span>
-            <span id="statusText">8x8 • 1v1 • Canvas</span>
-          </div>
-          <div class="section">
-            <canvas id="gameCanvas" width="800" height="800"></canvas>
-          </div>
-        </main>
-
-        <aside class="panel hud-grid">
-          <div>
-            <h3>État du joueur</h3>
-            <div class="bar-group" id="playerHud"></div>
-          </div>
-          <div>
-            <h3>État de l’ennemi</h3>
-            <div class="bar-group" id="enemyHud"></div>
-          </div>
-          <div>
-            <h3>Sort actif</h3>
-            <div class="skill-card" id="skillInfo"></div>
-          </div>
-          <div>
-            <h3>Journal de combat</h3>
-            <div class="log" id="combatLog"></div>
-          </div>
-        </aside>
-      </div>
-    </div>
+    <div class="view" id="combatView"></div>
   </section>
 
   <script>
@@ -2096,10 +2048,6 @@
       character.sceneTop = nextPos.top;
       character.localX = targetCell.col;
       character.localY = targetCell.row;
-      character.isMoving = false;
-      if (illustratedMapState.combat.active && illustratedMapState.combat.currentSide === 'player') {
-        illustratedMapState.combat.mp = Math.max(0, illustratedMapState.combat.mp - 1);
-      }
       renderWorldPreview();
       if (callback) callback();
     }
@@ -2107,118 +2055,25 @@
     function moveToScreen(direction) {
       const character = game.currentCharacter;
       if (!character) return;
-      setMessage('worldMessage', `La beta actuelle reste sur une seule carte jouable. Direction ${direction} désactivée pour l’instant.`, 'error');
-    }
-
-
-
-
-    function handleNpcAction(payload = {}) {
-      const character = game.currentCharacter;
-      if (!character) return;
-      if (payload.action === 'guide') {
-        openSceneDialog(payload.name, 'Prends la Porte de l’est, puis suis le Chemin des novices. Ne va pas jouer au héros trop tôt.', [{ label: 'Compris', onClick: closeSceneDialog }]);
-        return;
-      }
-      if (payload.action === 'heal') {
-        openSceneDialog(payload.name, 'Tu as l’air en vrac. Je peux te remettre d’aplomb avant que tu repartes.', [{ label: 'Me soigner', onClick: () => { character.hp = 100; setMessage('worldMessage', `${payload.name} te remet d’aplomb avant de repartir.`, 'ok'); closeSceneDialog(); } }, { label: 'Plus tard', secondary: true, onClick: closeSceneDialog }]);
-        return;
-      }
-      if (payload.action === 'warn') {
-        openSceneDialog(payload.name, 'Le Bosquet trouble commence juste après. Si tu y vas trop léger, tu vas le sentir passer.', [{ label: 'Merci', onClick: closeSceneDialog }]);
-        return;
-      }
-      if (payload.action === 'craft-help') {
-        openSceneDialog(payload.name, 'Commence par le craft simple à l’atelier communal. Avec quelques ressources, tu peux déjà t’équiper.', [{ label: 'Ouvrir le craft', onClick: () => { closeSceneDialog(); switchView('craftView'); } }, { label: 'Fermer', secondary: true, onClick: closeSceneDialog }]);
-        return;
-      }
-      openSceneDialog(payload.name, 'Rien de spécial pour le moment.', [{ label: 'Fermer', onClick: closeSceneDialog }]);
-    }
-
-    function inspectSceneElement(type, payload = {}) {
-      if (type === 'npc') {
-        handleNpcAction(payload);
-        return;
-      }
-      if (type === 'landmark') {
-        const character = game.currentCharacter;
-        if (payload.action === 'heal-fountain' && character) {
-          openSceneDialog(payload.label, 'Une eau claire et froide. Tu peux reprendre ton souffle ici.', [{ label: 'Me reposer', onClick: () => { character.hp = 100; setMessage('worldMessage', 'La fontaine te remet d’aplomb.', 'ok'); closeSceneDialog(); } }, { label: 'Fermer', secondary: true, onClick: closeSceneDialog }]);
-          return;
-        }
-        if (payload.action === 'open-craft') {
-          openSceneDialog(payload.label, 'L’atelier communal est prêt. C’est ici que ton loop de craft commence vraiment.', [{ label: 'Ouvrir le craft', onClick: () => { closeSceneDialog(); switchView('craftView'); } }, { label: 'Fermer', secondary: true, onClick: closeSceneDialog }]);
-          return;
-        }
-        if (payload.action === 'starter-kit' && character) {
-          character.inventory = character.inventory || {};
-          character.inventory.bois_sombre = (character.inventory.bois_sombre || 0) + 1;
-          character.inventory.fer_use = (character.inventory.fer_use || 0) + 1;
-          openSceneDialog(payload.label, 'Tu récupères un petit lot de départ pour bricoler quelque chose.', [{ label: 'Prendre', onClick: () => { setMessage('worldMessage', 'Tu récupères un petit kit de ressources.', 'ok'); closeSceneDialog(); renderGameHud(); } }]);
-          return;
-        }
-        openSceneDialog(payload.label, `${payload.label} est un point interactif de type ${payload.type}.`, [{ label: 'Fermer', onClick: closeSceneDialog }]);
-        return;
-      }
-      if (type === 'player') {
-        openSceneDialog(payload.name, `Tu es actuellement sur ${payload.mapId}.`, [{ label: 'Fermer', onClick: closeSceneDialog }]);
-        return;
-      }
+      setMessage('worldMessage', `Direction ${direction} indisponible dans ce prototype neuf.`, 'error');
     }
 
     function renderGameHud() {
       const panel = document.getElementById('gameHudPanel');
       const character = game.currentCharacter;
       if (!character) {
-        panel.innerHTML = '<div class="hud-card"><div class="hint">Choisis un personnage pour afficher le HUD.</div></div>';
+        panel.innerHTML = '<div class="hud-card"><div class="hint">Choisis un personnage pour lancer le nouveau prototype.</div></div>';
         return;
       }
-      const equipment = character.equipment || { arme: null, amulette: null, cape: null };
-      const inventoryEntries = Object.entries(character.inventory || {}).filter(([, qty]) => qty > 0).slice(0, 6);
-      const currentHp = character.hp ?? 100;
-      const attrs = character.attributes || {};
-      character.class = 'warrior';
-      const classData = game?.classes?.warrior || { name: 'Guerrier', stats: { ap: 0, mp: 0 }, skill: { name: 'Compétence', element: 'neutre' } };
       panel.innerHTML = `
         <div class="hud-card">
           <div class="hud-title"><strong>${character.name}</strong><span class="badge">Niv. ${character.level || 1}</span></div>
           <div class="badge-row">
-            <span class="badge">Guerrier beta</span>
-            <span class="badge">Map unique</span>
+            <span class="badge">Map propre</span>
+            <span class="badge">Prototype neuf</span>
             <span class="badge">XP ${character.xp || 0}</span>
-            <span class="badge">HP ${currentHp}</span>
-            <span class="badge">PA ${classData.stats.ap}</span>
-            <span class="badge">PM ${classData.stats.mp}</span>
           </div>
-          <div class="hud-resources">
-            <div class="hud-chip">❤️ Vitalité ${attrs.vitalite || 0}</div>
-            <div class="hud-chip">🧠 Sagesse ${attrs.sagesse || 0}</div>
-            <div class="hud-chip">🪨 Force ${attrs.force || 0}</div>
-            <div class="hud-chip">🔥 Intel ${attrs.intelligence || 0}</div>
-            <div class="hud-chip">💧 Chance ${attrs.chance || 0}</div>
-            <div class="hud-chip">🌪 Agilité ${attrs.agilite || 0}</div>
-          </div>
-        </div>
-        <div class="hud-card">
-          <div class="hud-title"><strong>Équipement</strong><span class="badge">3 slots</span></div>
-          <div class="hud-slots">
-            <div class="hud-slot">⚔️<br>${equipment.arme || 'Arme vide'}</div>
-            <div class="hud-slot">📿<br>${equipment.amulette || 'Amulette vide'}</div>
-            <div class="hud-slot">🧥<br>${equipment.cape || 'Cape vide'}</div>
-          </div>
-        </div>
-        <div class="hud-card">
-          <div class="hud-title"><strong>Sorts</strong><span class="badge">Barre rapide</span></div>
-          <div class="spell-bar">
-            <div class="spell-chip"><strong>1</strong><span>${classData.skill.name}</span><span class="hint">${classData.skill.element}</span></div>
-            <div class="spell-chip"><strong>2</strong><span>À venir</span><span class="hint">sort</span></div>
-            <div class="spell-chip"><strong>3</strong><span>À venir</span><span class="hint">sort</span></div>
-            <div class="spell-chip"><strong>4</strong><span>À venir</span><span class="hint">sort</span></div>
-          </div>
-        </div>
-        <div class="hud-card">
-          <div class="hud-title"><strong>Sac</strong><span class="badge">${inventoryEntries.length} ressources</span></div>
-          <div class="hud-resources">${inventoryEntries.length ? inventoryEntries.map(([key, qty]) => `<div class="hud-chip">${key}<br>x${qty}</div>`).join('') : '<div class="hint">Sac encore léger.</div>'}</div>
+          <div class="hint">Objectif actuel : juste faire bouger le personnage proprement sur la carte.</div>
         </div>
       `;
     }
@@ -2231,29 +2086,18 @@
       const sceneGrid = document.getElementById('sceneGrid');
       const combatOverlayHud = document.getElementById('combatOverlayHud');
       const scenePathOverlay = document.getElementById('scenePathOverlay');
+      backdrop.className = 'scene-backdrop beta-map';
+      backdrop.style.background = '';
+      backdrop.innerHTML = '';
+      sceneGrid.classList.remove('combat-mode');
+      combatOverlayHud.classList.remove('visible');
+      combatOverlayHud.innerHTML = '';
+      scenePathOverlay.innerHTML = '';
       if (!character) {
-        backdrop.style.background = SCENE_BACKDROPS.safe;
         actors.innerHTML = '<div class="scene-actor player" style="left:50%;top:60%;"><div class="scene-sprite">🧍</div><div class="scene-label">Choisis un personnage</div></div>';
-        hitbox.innerHTML = '';
+        hitbox.onclick = null;
         return;
       }
-      const mapKey = character.mapKey || STARTING_POSITION.mapKey;
-      const screen = MAPS[mapKey] || MAPS[STARTING_POSITION.mapKey];
-      const biome = screen?.biome || 'safe';
-      const illustration = SCENE_ILLUSTRATIONS[mapKey] || SCENE_ILLUSTRATIONS.default;
-      if (mapKey === BETA_SINGLE_MAP) {
-        backdrop.className = 'scene-backdrop beta-map';
-        backdrop.style.background = '';
-        backdrop.innerHTML = '';
-      } else {
-        backdrop.className = 'scene-backdrop';
-        backdrop.style.background = `${illustration.sky}, ${SCENE_BACKDROPS[biome] || SCENE_BACKDROPS.safe}`;
-        backdrop.innerHTML = `<div class="scene-parallax">${(illustration.layers || []).map(layer => `<div class="scene-illustration-layer" style="${layer.style}"></div>`).join('')}</div>`;
-      }
-      const defaultCellPos = gridCellToScenePosition(6, 8);
-      const playerLeft = character.sceneLeft ?? defaultCellPos.left;
-      const playerTop = character.sceneTop ?? defaultCellPos.top;
-      const actorNodes = [`<div class="scene-actor player ${character.isMoving ? 'running' : ''}" data-facing="${character.facing || 'down'}" style="left:${playerLeft}%;top:${playerTop}%;"><button data-scene-type="player" data-name="${character.name}" data-map="${character.mapId}"><div class="scene-sprite"><div class="warrior-sprite"><div class="warrior-shadow"></div><div class="warrior-head"></div><div class="warrior-body"></div><div class="warrior-arm left"></div><div class="warrior-arm right"></div><div class="warrior-leg left"></div><div class="warrior-leg right"></div></div></div></button></div>`];
       if (character.gridCol == null) character.gridCol = 6;
       if (character.gridRow == null) character.gridRow = 8;
       if (character.sceneLeft == null || character.sceneTop == null) {
@@ -2261,92 +2105,15 @@
         character.sceneLeft = spawnPos.left;
         character.sceneTop = spawnPos.top;
       }
-      const enemies = illustratedMapState.combat.active && illustratedMapState.combat.enemy
-        ? [illustratedMapState.combat.enemy]
-        : (illustratedMapState.enemyByMap[mapKey] || []);
-      enemies.forEach(enemy => {
-        const enemyPos = typeof enemy.x === 'number' && enemy.x <= BETA_GRID.cols - 1 && typeof enemy.y === 'number' && enemy.y <= BETA_GRID.rows - 1
-          ? gridCellToScenePosition(enemy.x, enemy.y)
-          : { left: enemy.x, top: enemy.y };
-        actorNodes.push(`<div class="scene-enemy" style="left:${enemyPos.left}%;top:${enemyPos.top}%;"><button data-encounter-key="${enemy.encounterKey}"><div class="scene-sprite"><div class="enemy-sprite"><div class="enemy-shadow"></div><div class="enemy-head"></div><div class="enemy-body"></div><div class="enemy-leg left"></div><div class="enemy-leg right"></div></div></div><div class="scene-label">${illustratedMapState.combat.active ? 'En combat' : enemy.name}</div></button></div>`);
-      });
-      actors.innerHTML = actorNodes.join('');
-      actors.querySelectorAll('[data-scene-type]').forEach(node => node.addEventListener('click', () => inspectSceneElement(node.dataset.sceneType, { name: node.dataset.name, mapId: node.dataset.map, label: node.dataset.label, role: node.dataset.role, hint: node.dataset.hint, type: node.dataset.role, action: node.dataset.action })));
-      actors.querySelectorAll('[data-encounter-key]').forEach(node => node.addEventListener('click', () => {
-        if (illustratedMapState.combat.active && illustratedMapState.combat.currentSide === 'player') {
-          tryCastSelectedSpell();
-          return;
-        }
-        const encounter = ENCOUNTER_CONFIG[node.dataset.encounterKey];
-        if (!encounter) return;
-        illustratedMapState.combat.active = true;
-        illustratedMapState.combat.enemy = { name: encounter.name, x: 8, y: 4, hp: 40, encounterKey: node.dataset.encounterKey };
-        illustratedMapState.combat.turn = 1;
-        illustratedMapState.combat.selectedSpell = 'jab';
-        startPlayerTurn();
-        setMessage('worldMessage', `Combat lancé contre ${encounter.name}.`, 'error');
-        renderMainScene();
-      }));
-      hitbox.innerHTML = '';
-      if (illustratedMapState.combat.active) {
-        sceneGrid.classList.add('combat-mode');
-        combatOverlayHud.classList.add('visible');
-        const selectedSpell = PLAYER_COMBAT_SPELLS[illustratedMapState.combat.selectedSpell] || PLAYER_COMBAT_SPELLS.jab;
-        illustratedMapState.combat.rangeCells = getSpellRangeCells(selectedSpell.range);
-        combatOverlayHud.innerHTML = `
-          <strong>Combat tour par tour</strong>
-          <span>Tour ${illustratedMapState.combat.turn}</span>
-          <span>Actif ${illustratedMapState.combat.currentSide === 'player' ? 'joueur' : 'ennemi'}</span>
-          <span>Timer ${illustratedMapState.combat.currentSide === 'player' ? illustratedMapState.combat.timer : '...'}s</span>
-          <span>PA ${illustratedMapState.combat.ap}</span>
-          <span>PM ${illustratedMapState.combat.mp}</span>
-          <span>Ennemi ${illustratedMapState.combat.enemy?.name || 'Bandit'} • HP ${illustratedMapState.combat.enemy?.hp ?? 0}</span>
-          <div class="combat-spells">
-            ${Object.values(PLAYER_COMBAT_SPELLS).map(spell => `<button class="combat-spell-btn" data-spell-key="${spell.key}" ${illustratedMapState.combat.currentSide !== 'player' ? 'disabled' : ''}><strong>${spell.name}</strong><br>PA ${spell.apCost} • Portée ${spell.range} • Dégâts ${spell.damage}</button>`).join('')}
-          </div>
-        `;
-        combatOverlayHud.querySelectorAll('[data-spell-key]').forEach(button => button.addEventListener('click', () => {
-          illustratedMapState.combat.selectedSpell = button.dataset.spellKey;
-          renderMainScene();
-        }));
-        scenePathOverlay.innerHTML = [
-          ...(illustratedMapState.combat.rangeCells || []).map(cell => {
-            const pos = gridCellToScenePosition(cell.col, cell.row);
-            return `<div class="scene-path-cell range" style="left:${pos.left}%;top:${pos.top}%;"></div>`;
-          }),
-          ...(illustratedMapState.combat.previewPath || []).map(cell => {
-            const pos = gridCellToScenePosition(cell.col, cell.row);
-            return `<div class="scene-path-cell" style="left:${pos.left}%;top:${pos.top}%;"></div>`;
-          })
-        ].join('');
-      } else {
-        sceneGrid.classList.remove('combat-mode');
-        combatOverlayHud.classList.remove('visible');
-        combatOverlayHud.innerHTML = '';
-        scenePathOverlay.innerHTML = '';
-      }
-      hitbox.onmousemove = event => {
-        if (!illustratedMapState.combat.active || illustratedMapState.combat.currentSide !== 'player') return;
-        const rect = event.currentTarget.getBoundingClientRect();
-        const targetLeft = Math.max(12, Math.min(88, ((event.clientX - rect.left) / rect.width) * 100));
-        const targetTop = Math.max(22, Math.min(82, ((event.clientY - rect.top) / rect.height) * 100));
-        const hoverCell = scenePositionToGridCell(targetLeft, targetTop);
-        illustratedMapState.combat.previewPath = buildCellPath(character.gridCol ?? 6, character.gridRow ?? 8, hoverCell.col, hoverCell.row, illustratedMapState.combat.mp);
-        renderMainScene();
-      };
+      actors.innerHTML = `<div class="scene-actor player" style="left:${character.sceneLeft}%;top:${character.sceneTop}%;"><div class="scene-sprite"><div class="warrior-sprite"><div class="warrior-shadow"></div><div class="warrior-head"></div><div class="warrior-body"></div><div class="warrior-arm left"></div><div class="warrior-arm right"></div><div class="warrior-leg left"></div><div class="warrior-leg right"></div></div></div><div class="scene-label">${character.name}</div></div>`;
+      hitbox.onmousemove = null;
       hitbox.onclick = event => {
-        if (event.target.closest('button')) return;
         const rect = event.currentTarget.getBoundingClientRect();
         const targetLeft = Math.max(12, Math.min(88, ((event.clientX - rect.left) / rect.width) * 100));
         const targetTop = Math.max(22, Math.min(82, ((event.clientY - rect.top) / rect.height) * 100));
-        setMessage('worldMessage', `Déplacement vers ${Math.round(targetLeft)}%, ${Math.round(targetTop)}.`, 'ok');
-        movePlayerToScenePercent(targetLeft, targetTop, () => {
-          if (illustratedMapState.combat.active && illustratedMapState.combat.currentSide === 'player' && illustratedMapState.combat.mp <= 0) {
-            endPlayerTurn();
-          }
-        });
+        setMessage('worldMessage', `Déplacement simple vers ${Math.round(targetLeft)}%, ${Math.round(targetTop)}.`, 'ok');
+        movePlayerToScenePercent(targetLeft, targetTop);
       };
-      renderSceneDialog();
     }
 
     function renderWorldGrid() {
@@ -2354,14 +2121,6 @@
     }
 
     function renderWorldPreview() {
-      const character = game.currentCharacter;
-      if (!character) {
-        renderMainScene();
-        renderGameHud();
-        renderWorldGrid();
-        return;
-      }
-      setMessage('worldMessage', '', 'ok');
       renderMainScene();
       renderGameHud();
       renderWorldGrid();
