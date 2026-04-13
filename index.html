@@ -757,7 +757,7 @@
       enemyByMap: {
         'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 9, y: 7, encounterKey: 'bosquet-trouble' }],
       },
-      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, phase: 'placement', reachableCells: [], previewPath: [], rangeCells: [], blockedCells: [], timerId: null, currentSide: 'player', enemyAp: 4, enemyMp: 2, selectedSpell: 'jab', rewardPending: null },
+      combat: { active: false, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, timerId: null, currentSide: 'player', selectedSpell: 'jab', rangeCells: [], previewPath: [] },
       npcPositions: {
         'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
         'atelier-ville': [{ name: 'Borin', x: 62, y: 52 }],
@@ -1942,9 +1942,11 @@
       return { col, row };
     }
 
-    function isBlockedCell(col, row) {
-      return (illustratedMapState.combat.blockedCells || []).some(cell => cell.col === col && cell.row === row);
-    }
+    const PLAYER_COMBAT_SPELLS = {
+      jab: { key: 'jab', name: 'Coup rapide', apCost: 3, range: 1, damage: 12 },
+      slash: { key: 'slash', name: 'Entaille', apCost: 4, range: 2, damage: 16 },
+      throw: { key: 'throw', name: 'Lancer', apCost: 5, range: 4, damage: 20 },
+    };
 
     function buildCellPath(startCol, startRow, targetCol, targetRow, maxSteps = Infinity) {
       const path = [];
@@ -1958,11 +1960,12 @@
       return path;
     }
 
-    const PLAYER_COMBAT_SPELLS = {
-      jab: { key: 'jab', name: 'Coup rapide', apCost: 3, range: 1, damage: 12, label: 'Corps à corps rapide' },
-      slash: { key: 'slash', name: 'Entaille', apCost: 4, range: 2, damage: 16, label: 'Frappe frontale' },
-      throw: { key: 'throw', name: 'Lancer d’arme', apCost: 5, range: 4, damage: 20, label: 'Attaque à distance' },
-    };
+    function getEnemyDistance() {
+      const character = game.currentCharacter;
+      const enemy = illustratedMapState.combat.enemy;
+      if (!character || !enemy) return Infinity;
+      return Math.abs((enemy.x ?? 0) - (character.gridCol ?? 0)) + Math.abs((enemy.y ?? 0) - (character.gridRow ?? 0));
+    }
 
     function getSpellRangeCells(range) {
       const character = game.currentCharacter;
@@ -1979,148 +1982,107 @@
       return cells;
     }
 
-    function getEnemyDistance() {
+    function resetCombatState() {
+      clearInterval(illustratedMapState.combat.timerId);
+      illustratedMapState.combat.active = false;
+      illustratedMapState.combat.enemy = null;
+      illustratedMapState.combat.turn = 1;
+      illustratedMapState.combat.ap = 6;
+      illustratedMapState.combat.mp = 3;
+      illustratedMapState.combat.timer = 15;
+      illustratedMapState.combat.currentSide = 'player';
+      illustratedMapState.combat.rangeCells = [];
+      illustratedMapState.combat.previewPath = [];
+    }
+
+    function finishCombatVictory() {
+      const character = game.currentCharacter;
+      if (!character) return;
+      character.xp = (character.xp || 0) + 18;
+      character.inventory = character.inventory || {};
+      character.inventory.bois_sombre = (character.inventory.bois_sombre || 0) + 1;
+      character.inventory.fer_use = (character.inventory.fer_use || 0) + 1;
+      const currentMap = character.mapKey || BETA_SINGLE_MAP;
+      illustratedMapState.enemyByMap[currentMap] = [];
+      resetCombatState();
+      setMessage('worldMessage', 'Victoire. +18 XP, butin récupéré.', 'ok');
+      renderWorldPreview();
+    }
+
+    function finishCombatDefeat() {
+      const character = game.currentCharacter;
+      if (character) character.hp = 100;
+      resetCombatState();
+      setMessage('worldMessage', 'Défaite. Retour au calme.', 'error');
+      renderWorldPreview();
+    }
+
+    function startPlayerTurn() {
+      illustratedMapState.combat.currentSide = 'player';
+      illustratedMapState.combat.ap = 6;
+      illustratedMapState.combat.mp = 3;
+      illustratedMapState.combat.timer = 15;
+      clearInterval(illustratedMapState.combat.timerId);
+      illustratedMapState.combat.timerId = setInterval(() => {
+        illustratedMapState.combat.timer -= 1;
+        if (illustratedMapState.combat.timer <= 0) {
+          clearInterval(illustratedMapState.combat.timerId);
+          endPlayerTurn();
+          return;
+        }
+        renderMainScene();
+      }, 1000);
+    }
+
+    function endPlayerTurn() {
+      clearInterval(illustratedMapState.combat.timerId);
+      illustratedMapState.combat.currentSide = 'enemy';
+      illustratedMapState.combat.previewPath = [];
+      renderMainScene();
+      setTimeout(runEnemyTurn, 500);
+    }
+
+    function runEnemyTurn() {
       const character = game.currentCharacter;
       const enemy = illustratedMapState.combat.enemy;
-      if (!character || !enemy) return Infinity;
-      return Math.abs((enemy.x ?? 0) - (character.gridCol ?? 0)) + Math.abs((enemy.y ?? 0) - (character.gridRow ?? 0));
-    }
-
-    function finishInMapCombatVictory() {
-      const character = game.currentCharacter;
-      const reward = illustratedMapState.combat.rewardPending || { xp: 18, loot: { bois_sombre: 1 } };
-      if (!character) return;
-      character.xp = (character.xp || 0) + (reward.xp || 0);
-      character.inventory = character.inventory || {};
-      Object.entries(reward.loot || {}).forEach(([key, qty]) => {
-        character.inventory[key] = (character.inventory[key] || 0) + qty;
-      });
-      clearInterval(illustratedMapState.combat.timerId);
-      illustratedMapState.combat.active = false;
-      illustratedMapState.combat.phase = 'placement';
-      illustratedMapState.combat.previewPath = [];
-      illustratedMapState.combat.reachableCells = [];
-      illustratedMapState.combat.rangeCells = [];
-      illustratedMapState.combat.rewardPending = null;
-      const currentMap = character.mapKey || BETA_SINGLE_MAP;
-      illustratedMapState.enemyByMap[currentMap] = (illustratedMapState.enemyByMap[currentMap] || []).filter(enemy => enemy.encounterKey !== illustratedMapState.combat.encounterKey);
-      illustratedMapState.combat.enemy = null;
-      setMessage('worldMessage', `Victoire. +${reward.xp || 0} XP, butin récupéré.`, 'ok');
-      renderWorldPreview();
-    }
-
-    function finishInMapCombatDefeat() {
-      const character = game.currentCharacter;
-      clearInterval(illustratedMapState.combat.timerId);
-      illustratedMapState.combat.active = false;
-      illustratedMapState.combat.phase = 'placement';
-      illustratedMapState.combat.previewPath = [];
-      illustratedMapState.combat.reachableCells = [];
-      illustratedMapState.combat.rangeCells = [];
-      illustratedMapState.combat.rewardPending = null;
-      illustratedMapState.combat.enemy = null;
-      if (character) character.hp = 100;
-      setMessage('worldMessage', 'Défaite. Tu reprends ton souffle sur la carte.', 'error');
-      renderWorldPreview();
+      if (!character || !enemy) return;
+      const path = buildCellPath(enemy.x, enemy.y, character.gridCol ?? 6, character.gridRow ?? 8, 2);
+      const lastStep = path[path.length - 1];
+      if (lastStep) {
+        enemy.x = lastStep.col;
+        enemy.y = lastStep.row;
+      }
+      const distance = getEnemyDistance();
+      if (distance <= 1) {
+        character.hp = Math.max(0, (character.hp ?? 100) - 8);
+        if ((character.hp ?? 0) <= 0) {
+          finishCombatDefeat();
+          return;
+        }
+      }
+      illustratedMapState.combat.turn += 1;
+      startPlayerTurn();
+      renderMainScene();
     }
 
     function tryCastSelectedSpell() {
-      if (!illustratedMapState.combat.active || illustratedMapState.combat.currentSide !== 'player' || illustratedMapState.combat.phase !== 'combat') return;
       const spell = PLAYER_COMBAT_SPELLS[illustratedMapState.combat.selectedSpell] || PLAYER_COMBAT_SPELLS.jab;
       const enemy = illustratedMapState.combat.enemy;
-      if (!enemy) return;
-      if (illustratedMapState.combat.ap < spell.apCost) {
-        setMessage('worldMessage', `Pas assez de PA pour ${spell.name}.`, 'error');
-        renderMainScene();
-        return;
-      }
-      const distance = getEnemyDistance();
-      if (distance > spell.range) {
+      if (!illustratedMapState.combat.active || illustratedMapState.combat.currentSide !== 'player' || !enemy) return;
+      if (illustratedMapState.combat.ap < spell.apCost) return;
+      if (getEnemyDistance() > spell.range) {
         setMessage('worldMessage', `${spell.name} est hors de portée.`, 'error');
         renderMainScene();
         return;
       }
       illustratedMapState.combat.ap -= spell.apCost;
       enemy.hp = Math.max(0, (enemy.hp ?? 40) - spell.damage);
-      setMessage('worldMessage', `${spell.name} touche ${enemy.name} pour ${spell.damage} dégâts.`, 'ok');
       if (enemy.hp <= 0) {
-        illustratedMapState.combat.rewardPending = { xp: 18, loot: { bois_sombre: 1, fer_use: 1 } };
-        finishInMapCombatVictory();
+        finishCombatVictory();
         return;
       }
-      if (illustratedMapState.combat.ap <= 0) {
-        endPlayerTurn('Plus de PA, fin du tour.');
-        return;
-      }
+      if (illustratedMapState.combat.ap <= 0) endPlayerTurn();
       renderMainScene();
-    }
-
-    function beginPlayerTurn() {
-      illustratedMapState.combat.currentSide = 'player';
-      illustratedMapState.combat.turn += 1;
-      illustratedMapState.combat.ap = 6;
-      illustratedMapState.combat.mp = 3;
-      illustratedMapState.combat.timer = 15;
-      illustratedMapState.combat.previewPath = [];
-      refreshCombatTimer();
-      setMessage('worldMessage', 'Ton tour commence.', 'ok');
-      renderMainScene();
-    }
-
-    function runEnemyTurn() {
-      if (!illustratedMapState.combat.active || !game.currentCharacter || !illustratedMapState.combat.enemy) return;
-      clearInterval(illustratedMapState.combat.timerId);
-      illustratedMapState.combat.currentSide = 'enemy';
-      illustratedMapState.combat.timer = 0;
-      illustratedMapState.combat.previewPath = [];
-      const character = game.currentCharacter;
-      const enemy = illustratedMapState.combat.enemy;
-      const path = buildCellPath(enemy.x, enemy.y, character.gridCol ?? 6, character.gridRow ?? 8, illustratedMapState.combat.enemyMp);
-      const lastStep = path[path.length - 1];
-      if (lastStep) {
-        enemy.x = lastStep.col;
-        enemy.y = lastStep.row;
-      }
-      renderMainScene();
-      setTimeout(() => {
-        const distance = Math.abs((enemy.x ?? 0) - (character.gridCol ?? 0)) + Math.abs((enemy.y ?? 0) - (character.gridRow ?? 0));
-        if (distance <= 1) {
-          character.hp = Math.max(0, (character.hp ?? 100) - 8);
-          if ((character.hp ?? 0) <= 0) {
-            finishInMapCombatDefeat();
-            return;
-          }
-          setMessage('worldMessage', `${enemy.name} te frappe pour 8 dégâts.`, 'error');
-        } else {
-          setMessage('worldMessage', `${enemy.name} avance vers toi.`, 'error');
-        }
-        beginPlayerTurn();
-      }, 700);
-    }
-
-    function endPlayerTurn(reason = 'Tour terminé.') {
-      if (!illustratedMapState.combat.active) return;
-      clearInterval(illustratedMapState.combat.timerId);
-      illustratedMapState.combat.previewPath = [];
-      illustratedMapState.combat.ap = 0;
-      illustratedMapState.combat.mp = 0;
-      setMessage('worldMessage', reason, 'ok');
-      runEnemyTurn();
-    }
-
-    function refreshCombatTimer() {
-      if (!illustratedMapState.combat.active || illustratedMapState.combat.currentSide !== 'player') return;
-      clearInterval(illustratedMapState.combat.timerId);
-      illustratedMapState.combat.timer = 15;
-      illustratedMapState.combat.timerId = setInterval(() => {
-        illustratedMapState.combat.timer -= 1;
-        if (illustratedMapState.combat.timer <= 0) {
-          clearInterval(illustratedMapState.combat.timerId);
-          endPlayerTurn('Temps écoulé, tour passé.');
-          return;
-        }
-        renderMainScene();
-      }, 1000);
     }
 
     function movePlayerToScenePercent(targetLeft, targetTop, callback = null) {
@@ -2128,44 +2090,36 @@
       if (!character) return;
       const targetCell = scenePositionToGridCell(targetLeft, targetTop);
       const startCell = {
-        col: character.gridCol ?? scenePositionToGridCell(character.sceneLeft ?? 52, character.sceneTop ?? 67).col,
-        row: character.gridRow ?? scenePositionToGridCell(character.sceneLeft ?? 52, character.sceneTop ?? 67).row,
+        col: character.gridCol ?? 6,
+        row: character.gridRow ?? 8,
       };
-      const maxSteps = illustratedMapState.combat.active ? (illustratedMapState.combat.phase === 'placement' ? 3 : (illustratedMapState.combat.currentSide === 'player' ? illustratedMapState.combat.mp : 0)) : Infinity;
+      const maxSteps = illustratedMapState.combat.active ? illustratedMapState.combat.mp : Infinity;
       const path = buildCellPath(startCell.col, startCell.row, targetCell.col, targetCell.row, maxSteps);
       character.movePath = path;
       character.moveTarget = { callback };
       if (character.isMoving) return;
       character.isMoving = true;
-
       const stepMove = () => {
         const nextCell = character.movePath?.shift();
         if (!nextCell) {
           character.isMoving = false;
           const finishedCallback = character.moveTarget?.callback;
           character.moveTarget = null;
-          renderMainScene();
           if (finishedCallback) finishedCallback();
           renderWorldPreview();
           return;
         }
-        const currentLeft = character.sceneLeft ?? 52;
-        const currentTop = character.sceneTop ?? 67;
         const nextPos = gridCellToScenePosition(nextCell.col, nextCell.row);
-        if (illustratedMapState.combat.active && illustratedMapState.combat.phase !== 'placement' && illustratedMapState.combat.currentSide === 'player') {
-          illustratedMapState.combat.mp = Math.max(0, illustratedMapState.combat.mp - 1);
-        }
-        character.facing = getFacingDirection(currentLeft, currentTop, nextPos.left, nextPos.top, character.facing || 'down');
         character.gridCol = nextCell.col;
         character.gridRow = nextCell.row;
         character.sceneLeft = nextPos.left;
         character.sceneTop = nextPos.top;
-        character.localX = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((nextPos.left - 18) / 16)));
-        character.localY = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((nextPos.top - 28) / 12)));
+        if (illustratedMapState.combat.active && illustratedMapState.combat.currentSide === 'player') {
+          illustratedMapState.combat.mp = Math.max(0, illustratedMapState.combat.mp - 1);
+        }
         renderMainScene();
         setTimeout(stepMove, 110);
       };
-
       stepMove();
     }
 
@@ -2338,28 +2292,18 @@
       actors.innerHTML = actorNodes.join('');
       actors.querySelectorAll('[data-scene-type]').forEach(node => node.addEventListener('click', () => inspectSceneElement(node.dataset.sceneType, { name: node.dataset.name, mapId: node.dataset.map, label: node.dataset.label, role: node.dataset.role, hint: node.dataset.hint, type: node.dataset.role, action: node.dataset.action })));
       actors.querySelectorAll('[data-encounter-key]').forEach(node => node.addEventListener('click', () => {
-        if (illustratedMapState.combat.active && illustratedMapState.combat.phase === 'combat' && illustratedMapState.combat.currentSide === 'player') {
+        if (illustratedMapState.combat.active && illustratedMapState.combat.currentSide === 'player') {
           tryCastSelectedSpell();
           return;
         }
         const encounter = ENCOUNTER_CONFIG[node.dataset.encounterKey];
         if (!encounter) return;
         illustratedMapState.combat.active = true;
-        illustratedMapState.combat.encounterKey = node.dataset.encounterKey;
-        illustratedMapState.combat.turn = 1;
-        illustratedMapState.combat.ap = 6;
-        illustratedMapState.combat.mp = 3;
-        illustratedMapState.combat.phase = 'placement';
-        illustratedMapState.combat.currentSide = 'player';
-        illustratedMapState.combat.enemyAp = 4;
-        illustratedMapState.combat.enemyMp = 2;
         illustratedMapState.combat.enemy = { name: encounter.name, x: 8, y: 4, hp: 40, encounterKey: node.dataset.encounterKey };
-        illustratedMapState.combat.reachableCells = [{ col: 5, row: 7 }, { col: 6, row: 7 }, { col: 7, row: 7 }, { col: 5, row: 8 }, { col: 6, row: 8 }, { col: 7, row: 8 }, { col: 5, row: 9 }, { col: 6, row: 9 }, { col: 7, row: 9 }].filter(cell => !isBlockedCell(cell.col, cell.row));
-        illustratedMapState.combat.rangeCells = [];
-        illustratedMapState.combat.previewPath = [];
-        sceneGrid.classList.add('combat-mode');
-        refreshCombatTimer();
-        setMessage('worldMessage', `Place ton personnage avant le combat contre ${encounter.name}.`, 'error');
+        illustratedMapState.combat.turn = 1;
+        illustratedMapState.combat.selectedSpell = 'jab';
+        startPlayerTurn();
+        setMessage('worldMessage', `Combat lancé contre ${encounter.name}.`, 'error');
         renderMainScene();
       }));
       hitbox.innerHTML = '';
@@ -2367,18 +2311,17 @@
         sceneGrid.classList.add('combat-mode');
         combatOverlayHud.classList.add('visible');
         const selectedSpell = PLAYER_COMBAT_SPELLS[illustratedMapState.combat.selectedSpell] || PLAYER_COMBAT_SPELLS.jab;
-        illustratedMapState.combat.rangeCells = illustratedMapState.combat.phase === 'combat' ? getSpellRangeCells(selectedSpell.range) : [];
+        illustratedMapState.combat.rangeCells = getSpellRangeCells(selectedSpell.range);
         combatOverlayHud.innerHTML = `
-          <strong>${illustratedMapState.combat.phase === 'placement' ? 'Placement' : 'Combat en cours'}</strong>
+          <strong>Combat tour par tour</strong>
           <span>Tour ${illustratedMapState.combat.turn}</span>
           <span>Actif ${illustratedMapState.combat.currentSide === 'player' ? 'joueur' : 'ennemi'}</span>
           <span>Timer ${illustratedMapState.combat.currentSide === 'player' ? illustratedMapState.combat.timer : '...'}s</span>
           <span>PA ${illustratedMapState.combat.ap}</span>
           <span>PM ${illustratedMapState.combat.mp}</span>
           <span>Ennemi ${illustratedMapState.combat.enemy?.name || 'Bandit'} • HP ${illustratedMapState.combat.enemy?.hp ?? 0}</span>
-          <span>Sort choisi ${selectedSpell.name} • portée ${selectedSpell.range}</span>
           <div class="combat-spells">
-            ${Object.values(PLAYER_COMBAT_SPELLS).map(spell => `<button class="combat-spell-btn" data-spell-key="${spell.key}" ${illustratedMapState.combat.currentSide !== 'player' || illustratedMapState.combat.phase !== 'combat' ? 'disabled' : ''}><strong>${spell.name}</strong><br>PA ${spell.apCost} • Portée ${spell.range} • Dégâts ${spell.damage}</button>`).join('')}
+            ${Object.values(PLAYER_COMBAT_SPELLS).map(spell => `<button class="combat-spell-btn" data-spell-key="${spell.key}" ${illustratedMapState.combat.currentSide !== 'player' ? 'disabled' : ''}><strong>${spell.name}</strong><br>PA ${spell.apCost} • Portée ${spell.range} • Dégâts ${spell.damage}</button>`).join('')}
           </div>
         `;
         combatOverlayHud.querySelectorAll('[data-spell-key]').forEach(button => button.addEventListener('click', () => {
@@ -2386,17 +2329,9 @@
           renderMainScene();
         }));
         scenePathOverlay.innerHTML = [
-          ...(illustratedMapState.combat.reachableCells || []).map(cell => {
-            const pos = gridCellToScenePosition(cell.col, cell.row);
-            return `<div class="scene-path-cell reachable" style="left:${pos.left}%;top:${pos.top}%;"></div>`;
-          }),
           ...(illustratedMapState.combat.rangeCells || []).map(cell => {
             const pos = gridCellToScenePosition(cell.col, cell.row);
             return `<div class="scene-path-cell range" style="left:${pos.left}%;top:${pos.top}%;"></div>`;
-          }),
-          ...(illustratedMapState.combat.blockedCells || []).map(cell => {
-            const pos = gridCellToScenePosition(cell.col, cell.row);
-            return `<div class="scene-path-cell blocked" style="left:${pos.left}%;top:${pos.top}%;"></div>`;
           }),
           ...(illustratedMapState.combat.previewPath || []).map(cell => {
             const pos = gridCellToScenePosition(cell.col, cell.row);
@@ -2410,55 +2345,26 @@
         scenePathOverlay.innerHTML = '';
       }
       hitbox.onmousemove = event => {
-        if (!illustratedMapState.combat.active) return;
+        if (!illustratedMapState.combat.active || illustratedMapState.combat.currentSide !== 'player') return;
         const rect = event.currentTarget.getBoundingClientRect();
         const targetLeft = Math.max(12, Math.min(88, ((event.clientX - rect.left) / rect.width) * 100));
         const targetTop = Math.max(22, Math.min(82, ((event.clientY - rect.top) / rect.height) * 100));
         const hoverCell = scenePositionToGridCell(targetLeft, targetTop);
-        const startCol = character.gridCol ?? 6;
-        const startRow = character.gridRow ?? 8;
-        const limit = illustratedMapState.combat.phase === 'placement' ? 3 : (illustratedMapState.combat.currentSide === 'player' ? illustratedMapState.combat.mp : 0);
-        illustratedMapState.combat.previewPath = buildCellPath(startCol, startRow, hoverCell.col, hoverCell.row, limit);
-        scenePathOverlay.innerHTML = [
-          ...(illustratedMapState.combat.reachableCells || []).map(cell => {
-            const pos = gridCellToScenePosition(cell.col, cell.row);
-            return `<div class="scene-path-cell reachable" style="left:${pos.left}%;top:${pos.top}%;"></div>`;
-          }),
-          ...(illustratedMapState.combat.rangeCells || []).map(cell => {
-            const pos = gridCellToScenePosition(cell.col, cell.row);
-            return `<div class="scene-path-cell range" style="left:${pos.left}%;top:${pos.top}%;"></div>`;
-          }),
-          ...(illustratedMapState.combat.blockedCells || []).map(cell => {
-            const pos = gridCellToScenePosition(cell.col, cell.row);
-            return `<div class="scene-path-cell blocked" style="left:${pos.left}%;top:${pos.top}%;"></div>`;
-          }),
-          ...(illustratedMapState.combat.previewPath || []).map(cell => {
-            const pos = gridCellToScenePosition(cell.col, cell.row);
-            return `<div class="scene-path-cell" style="left:${pos.left}%;top:${pos.top}%;"></div>`;
-          })
-        ].join('');
+        illustratedMapState.combat.previewPath = buildCellPath(character.gridCol ?? 6, character.gridRow ?? 8, hoverCell.col, hoverCell.row, illustratedMapState.combat.mp);
+        renderMainScene();
       };
       hitbox.onclick = event => {
         if (event.target.closest('button')) return;
         const rect = event.currentTarget.getBoundingClientRect();
         const targetLeft = Math.max(12, Math.min(88, ((event.clientX - rect.left) / rect.width) * 100));
         const targetTop = Math.max(22, Math.min(82, ((event.clientY - rect.top) / rect.height) * 100));
-        if (illustratedMapState.combat.active && illustratedMapState.combat.phase === 'placement') {
-          illustratedMapState.combat.phase = 'combat';
-          illustratedMapState.combat.turn = 0;
-          setMessage('worldMessage', `${character.name} prend sa position de départ.`, 'ok');
-          movePlayerToScenePercent(targetLeft, targetTop, () => beginPlayerTurn());
+        if (illustratedMapState.combat.active && illustratedMapState.combat.currentSide === 'player') {
+          movePlayerToScenePercent(targetLeft, targetTop, () => {
+            if (illustratedMapState.combat.mp <= 0) endPlayerTurn();
+          });
           return;
         }
-        if (illustratedMapState.combat.active && illustratedMapState.combat.currentSide !== 'player') {
-          return;
-        }
-        setMessage('worldMessage', illustratedMapState.combat.active ? `${character.name} se déplace pendant son tour.` : `${character.name} marche vers le point cliqué.`, 'ok');
-        movePlayerToScenePercent(targetLeft, targetTop, () => {
-          if (illustratedMapState.combat.active && illustratedMapState.combat.phase === 'combat' && illustratedMapState.combat.mp <= 0) {
-            endPlayerTurn('Déplacement terminé, plus de PM.');
-          }
-        });
+        movePlayerToScenePercent(targetLeft, targetTop);
       };
       renderSceneDialog();
     }
