@@ -1282,7 +1282,7 @@
     class Game {
       constructor() {
         this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
+        this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
         this.grid = new Grid(8);
         this.selectedClass = 'warrior';
         this.currentCharacter = null;
@@ -1304,9 +1304,11 @@
           mage: { name: 'Mage', flavor: 'Fragile mais très dangereux à distance.', stats: { maxHp: 85, ap: 8, mp: 4, speed: 10, color: '#8b5cf6' }, skill: new Skill({ name: 'Orbe arcanique', costAP: 5, range: 4, damage: 26, element: 'feu', description: 'Projectile magique à moyenne portée.' }) },
           archer: { name: 'Archer', flavor: 'Mobile, précis, excellent pour kite.', stats: { maxHp: 100, ap: 6, mp: 5, speed: 12, color: '#22c55e' }, skill: new Skill({ name: 'Flèche perçante', costAP: 4, range: 5, damage: 22, element: 'air', description: 'Tir longue portée très flexible.' }) },
         };
-        this.bindCombatUI();
-        this.renderClassChoices();
-        this.render();
+        if (this.canvas && this.ctx) {
+          this.bindCombatUI();
+          this.renderClassChoices();
+          this.render();
+        }
       }
 
       setCharacter(character) {
