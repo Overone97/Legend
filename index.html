@@ -757,7 +757,7 @@
       enemyByMap: {
         'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 9, y: 7, encounterKey: 'bosquet-trouble' }],
       },
-      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, phase: 'placement', reachableCells: [], previewPath: [], rangeCells: [], blockedCells: [{ col: 4, row: 5 }, { col: 5, row: 5 }, { col: 6, row: 5 }, { col: 7, row: 6 }, { col: 3, row: 8 }], timerId: null, currentSide: 'player', enemyAp: 4, enemyMp: 2, selectedSpell: 'jab', rewardPending: null },
+      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, phase: 'placement', reachableCells: [], previewPath: [], rangeCells: [], blockedCells: [{ col: 4, row: 5 }, { col: 5, row: 5 }, { col: 6, row: 5 }], timerId: null, currentSide: 'player', enemyAp: 4, enemyMp: 2, selectedSpell: 'jab', rewardPending: null },
       npcPositions: {
         'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
         'atelier-ville': [{ name: 'Borin', x: 62, y: 52 }],
@@ -2149,6 +2149,10 @@
         return;
       }
       const path = buildCellPath(startCell.col, startCell.row, targetCell.col, targetCell.row, maxSteps);
+      if (!path.length && (startCell.col !== targetCell.col || startCell.row !== targetCell.row)) {
+        setMessage('worldMessage', 'Aucun chemin praticable.', 'error');
+        return;
+      }
       character.movePath = path;
       character.moveTarget = { callback };
       if (character.isMoving) return;
@@ -2354,7 +2358,7 @@
       actors.innerHTML = actorNodes.join('');
       actors.querySelectorAll('[data-scene-type]').forEach(node => node.addEventListener('click', () => inspectSceneElement(node.dataset.sceneType, { name: node.dataset.name, mapId: node.dataset.map, label: node.dataset.label, role: node.dataset.role, hint: node.dataset.hint, type: node.dataset.role, action: node.dataset.action })));
       actors.querySelectorAll('[data-encounter-key]').forEach(node => node.addEventListener('click', () => {
-        if (illustratedMapState.combat.active && illustratedMapState.combat.phase === 'combat') {
+        if (illustratedMapState.combat.active && illustratedMapState.combat.phase === 'combat' && illustratedMapState.combat.currentSide === 'player') {
           tryCastSelectedSpell();
           return;
         }
@@ -2370,7 +2374,7 @@
         illustratedMapState.combat.enemyAp = 4;
         illustratedMapState.combat.enemyMp = 2;
         illustratedMapState.combat.enemy = { name: encounter.name, x: 8, y: 4, hp: 40, encounterKey: node.dataset.encounterKey };
-        illustratedMapState.combat.reachableCells = [{ col: 5, row: 7 }, { col: 6, row: 7 }, { col: 7, row: 7 }, { col: 5, row: 8 }, { col: 6, row: 8 }, { col: 7, row: 8 }, { col: 5, row: 9 }, { col: 6, row: 9 }, { col: 7, row: 9 }];
+        illustratedMapState.combat.reachableCells = [{ col: 5, row: 7 }, { col: 6, row: 7 }, { col: 7, row: 7 }, { col: 5, row: 8 }, { col: 6, row: 8 }, { col: 7, row: 8 }, { col: 5, row: 9 }, { col: 6, row: 9 }, { col: 7, row: 9 }].filter(cell => !isBlockedCell(cell.col, cell.row));
         illustratedMapState.combat.rangeCells = [];
         illustratedMapState.combat.previewPath = [];
         sceneGrid.classList.add('combat-mode');
