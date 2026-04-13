@@ -221,9 +221,9 @@
       background-image:
         linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px);
-      background-size: calc((100% - 20%) / 11) calc((100% - 30%) / 11);
-      background-position: 10% 18%;
-      mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 16%, rgba(0,0,0,0.9) 86%, transparent 100%);
+      background-size: calc((100% - 20%) / 11) calc((100% - 20%) / 11);
+      background-position: 10% 10%;
+      mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.85) 12%, rgba(0,0,0,0.9) 88%, transparent 100%);
       opacity: 0.45;
     }
     .scene-grid.combat-mode {
@@ -355,6 +355,21 @@
     .spell-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
     .spell-chip { min-height: 74px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: linear-gradient(180deg, rgba(30,41,59,0.9), rgba(15,23,42,0.96)); padding: 8px; display: grid; gap: 6px; align-content: space-between; }
     .dialog-box { position: absolute; left: 22px; right: 22px; bottom: 22px; z-index: 4; padding: 16px; border-radius: 20px; background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 18px 40px rgba(0,0,0,0.34); display: grid; gap: 10px; }
+    .combat-overlay-hud {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      z-index: 5;
+      min-width: 220px;
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(15,23,42,0.82);
+      border: 1px solid rgba(255,255,255,0.12);
+      display: none;
+      gap: 8px;
+      backdrop-filter: blur(8px);
+    }
+    .combat-overlay-hud.visible { display: grid; }
     .dialog-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .world-scene {
       display: grid;
@@ -467,7 +482,6 @@
       <button class="tab ghost" data-view="inventoryView">Inventaire</button>
       <button class="tab ghost" data-view="craftView">Craft</button>
       <button class="tab ghost" data-view="worldView">Carte</button>
-      <button class="tab ghost" data-view="combatView">Combat prototype</button>
       <button id="returnToWorldBtn" class="tab ghost" style="display:none;">Retour carte</button>
     </div>
 
@@ -552,6 +566,7 @@
             <div class="scene-grid" id="sceneGrid"></div>
             <div class="illustrated-map-hitbox" id="sceneHitbox"></div>
             <div class="scene-actors" id="sceneActors"></div>
+            <div class="combat-overlay-hud" id="combatOverlayHud"></div>
             <div class="dialog-box" id="sceneDialog" style="display:none;"></div>
             <div class="scene-floor"></div>
           </div>
@@ -700,7 +715,7 @@
       enemyByMap: {
         'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 9, y: 7, encounterKey: 'bosquet-trouble' }],
       },
-      combat: { active: false, encounterKey: null, enemy: null },
+      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3 },
       npcPositions: {
         'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
         'atelier-ville': [{ name: 'Borin', x: 62, y: 52 }],
@@ -2059,6 +2074,7 @@
       const actors = document.getElementById('sceneActors');
       const hitbox = document.getElementById('sceneHitbox');
       const sceneGrid = document.getElementById('sceneGrid');
+      const combatOverlayHud = document.getElementById('combatOverlayHud');
       if (!character) {
         backdrop.style.background = SCENE_BACKDROPS.safe;
         actors.innerHTML = '<div class="scene-actor player" style="left:50%;top:60%;"><div class="scene-sprite">🧍</div><div class="scene-label">Choisis un personnage</div></div>';
@@ -2105,6 +2121,9 @@
         if (!encounter) return;
         illustratedMapState.combat.active = true;
         illustratedMapState.combat.encounterKey = node.dataset.encounterKey;
+        illustratedMapState.combat.turn = 1;
+        illustratedMapState.combat.ap = 6;
+        illustratedMapState.combat.mp = 3;
         illustratedMapState.combat.enemy = { name: encounter.name, x: 8, y: 4, encounterKey: node.dataset.encounterKey };
         sceneGrid.classList.add('combat-mode');
         setMessage('worldMessage', `Combat engagé contre ${encounter.name} sur la même carte.`, 'error');
@@ -2113,8 +2132,18 @@
       hitbox.innerHTML = '';
       if (illustratedMapState.combat.active) {
         sceneGrid.classList.add('combat-mode');
+        combatOverlayHud.classList.add('visible');
+        combatOverlayHud.innerHTML = `
+          <strong>Combat en cours</strong>
+          <span>Tour ${illustratedMapState.combat.turn}</span>
+          <span>PA ${illustratedMapState.combat.ap}</span>
+          <span>PM ${illustratedMapState.combat.mp}</span>
+          <span>Ennemi ${illustratedMapState.combat.enemy?.name || 'Bandit'}</span>
+        `;
       } else {
         sceneGrid.classList.remove('combat-mode');
+        combatOverlayHud.classList.remove('visible');
+        combatOverlayHud.innerHTML = '';
       }
       hitbox.onclick = event => {
         if (event.target.closest('button')) return;
