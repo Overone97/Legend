@@ -385,6 +385,24 @@
       background: rgba(74,222,128,0.18);
       border-color: rgba(134,239,172,0.55);
     }
+    .combat-spells {
+      display: grid;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .combat-spell-btn {
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.06);
+      color: inherit;
+      cursor: pointer;
+    }
+    .combat-spell-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
     .dialog-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .world-scene {
       display: grid;
@@ -731,7 +749,7 @@
       enemyByMap: {
         'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 9, y: 7, encounterKey: 'bosquet-trouble' }],
       },
-      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, phase: 'placement', reachableCells: [], previewPath: [], timerId: null, currentSide: 'player', enemyAp: 4, enemyMp: 2 },
+      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, phase: 'placement', reachableCells: [], previewPath: [], timerId: null, currentSide: 'player', enemyAp: 4, enemyMp: 2, selectedSpell: 'jab' },
       npcPositions: {
         'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
         'atelier-ville': [{ name: 'Borin', x: 62, y: 52 }],
@@ -1930,6 +1948,56 @@
       return path;
     }
 
+    const PLAYER_COMBAT_SPELLS = {
+      jab: { key: 'jab', name: 'Coup rapide', apCost: 3, range: 1, damage: 12, label: 'Corps à corps rapide' },
+      slash: { key: 'slash', name: 'Entaille', apCost: 4, range: 2, damage: 16, label: 'Frappe frontale' },
+      throw: { key: 'throw', name: 'Lancer d’arme', apCost: 5, range: 4, damage: 20, label: 'Attaque à distance' },
+    };
+
+    function getEnemyDistance() {
+      const character = game.currentCharacter;
+      const enemy = illustratedMapState.combat.enemy;
+      if (!character || !enemy) return Infinity;
+      return Math.abs((enemy.x ?? 0) - (character.gridCol ?? 0)) + Math.abs((enemy.y ?? 0) - (character.gridRow ?? 0));
+    }
+
+    function tryCastSelectedSpell() {
+      if (!illustratedMapState.combat.active || illustratedMapState.combat.currentSide !== 'player' || illustratedMapState.combat.phase !== 'combat') return;
+      const spell = PLAYER_COMBAT_SPELLS[illustratedMapState.combat.selectedSpell] || PLAYER_COMBAT_SPELLS.jab;
+      const enemy = illustratedMapState.combat.enemy;
+      if (!enemy) return;
+      if (illustratedMapState.combat.ap < spell.apCost) {
+        setMessage('worldMessage', `Pas assez de PA pour ${spell.name}.`, 'error');
+        renderMainScene();
+        return;
+      }
+      const distance = getEnemyDistance();
+      if (distance > spell.range) {
+        setMessage('worldMessage', `${spell.name} est hors de portée.`, 'error');
+        renderMainScene();
+        return;
+      }
+      illustratedMapState.combat.ap -= spell.apCost;
+      enemy.hp = Math.max(0, (enemy.hp ?? 40) - spell.damage);
+      setMessage('worldMessage', `${spell.name} touche ${enemy.name} pour ${spell.damage} dégâts.`, 'ok');
+      if (enemy.hp <= 0) {
+        clearInterval(illustratedMapState.combat.timerId);
+        illustratedMapState.combat.active = false;
+        illustratedMapState.combat.phase = 'placement';
+        illustratedMapState.combat.previewPath = [];
+        illustratedMapState.combat.reachableCells = [];
+        illustratedMapState.combat.enemy = null;
+        setMessage('worldMessage', 'Combat gagné.', 'ok');
+        renderWorldPreview();
+        return;
+      }
+      if (illustratedMapState.combat.ap <= 0) {
+        endPlayerTurn('Plus de PA, fin du tour.');
+        return;
+      }
+      renderMainScene();
+    }
+
     function beginPlayerTurn() {
       illustratedMapState.combat.currentSide = 'player';
       illustratedMapState.combat.turn += 1;
@@ -2218,7 +2286,7 @@
         illustratedMapState.combat.currentSide = 'player';
         illustratedMapState.combat.enemyAp = 4;
         illustratedMapState.combat.enemyMp = 2;
-        illustratedMapState.combat.enemy = { name: encounter.name, x: 8, y: 4, encounterKey: node.dataset.encounterKey };
+        illustratedMapState.combat.enemy = { name: encounter.name, x: 8, y: 4, hp: 40, encounterKey: node.dataset.encounterKey };
         illustratedMapState.combat.reachableCells = [{ col: 5, row: 7 }, { col: 6, row: 7 }, { col: 7, row: 7 }, { col: 5, row: 8 }, { col: 6, row: 8 }, { col: 7, row: 8 }, { col: 5, row: 9 }, { col: 6, row: 9 }, { col: 7, row: 9 }];
         illustratedMapState.combat.previewPath = [];
         sceneGrid.classList.add('combat-mode');
@@ -2230,6 +2298,7 @@
       if (illustratedMapState.combat.active) {
         sceneGrid.classList.add('combat-mode');
         combatOverlayHud.classList.add('visible');
+        const selectedSpell = PLAYER_COMBAT_SPELLS[illustratedMapState.combat.selectedSpell] || PLAYER_COMBAT_SPELLS.jab;
         combatOverlayHud.innerHTML = `
           <strong>${illustratedMapState.combat.phase === 'placement' ? 'Placement' : 'Combat en cours'}</strong>
           <span>Tour ${illustratedMapState.combat.turn}</span>
@@ -2237,8 +2306,18 @@
           <span>Timer ${illustratedMapState.combat.currentSide === 'player' ? illustratedMapState.combat.timer : '...'}s</span>
           <span>PA ${illustratedMapState.combat.ap}</span>
           <span>PM ${illustratedMapState.combat.mp}</span>
-          <span>Ennemi ${illustratedMapState.combat.enemy?.name || 'Bandit'}</span>
+          <span>Ennemi ${illustratedMapState.combat.enemy?.name || 'Bandit'} • HP ${illustratedMapState.combat.enemy?.hp ?? 0}</span>
+          <span>Sort choisi ${selectedSpell.name} • portée ${selectedSpell.range}</span>
+          <div class="combat-spells">
+            ${Object.values(PLAYER_COMBAT_SPELLS).map(spell => `<button class="combat-spell-btn" data-spell-key="${spell.key}" ${illustratedMapState.combat.currentSide !== 'player' || illustratedMapState.combat.phase !== 'combat' ? 'disabled' : ''}><strong>${spell.name}</strong><br>PA ${spell.apCost} • Portée ${spell.range} • Dégâts ${spell.damage}</button>`).join('')}
+            <button class="combat-spell-btn" data-cast-spell ${illustratedMapState.combat.currentSide !== 'player' || illustratedMapState.combat.phase !== 'combat' ? 'disabled' : ''}><strong>Lancer le sort choisi</strong><br>${selectedSpell.label}</button>
+          </div>
         `;
+        combatOverlayHud.querySelectorAll('[data-spell-key]').forEach(button => button.addEventListener('click', () => {
+          illustratedMapState.combat.selectedSpell = button.dataset.spellKey;
+          renderMainScene();
+        }));
+        combatOverlayHud.querySelector('[data-cast-spell]')?.addEventListener('click', tryCastSelectedSpell);
       } else {
         sceneGrid.classList.remove('combat-mode');
         combatOverlayHud.classList.remove('visible');
