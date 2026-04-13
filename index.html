@@ -2087,26 +2087,23 @@
 
     function movePlayerToScenePercent(targetLeft, targetTop, callback = null) {
       const character = game.currentCharacter;
-      if (!character) return;
+      if (!character || character.isMoving) return;
       const targetCell = scenePositionToGridCell(targetLeft, targetTop);
-      const startCell = {
-        col: character.gridCol ?? 6,
-        row: character.gridRow ?? 8,
-      };
-      const maxSteps = illustratedMapState.combat.active ? illustratedMapState.combat.mp : Infinity;
-      const path = buildCellPath(startCell.col, startCell.row, targetCell.col, targetCell.row, maxSteps);
-      character.movePath = path;
-      character.moveTarget = { callback };
-      if (character.isMoving) return;
+      const startCol = character.gridCol ?? 6;
+      const startRow = character.gridRow ?? 8;
+      const maxSteps = illustratedMapState.combat.active && illustratedMapState.combat.currentSide === 'player'
+        ? Math.max(0, illustratedMapState.combat.mp)
+        : Infinity;
+      const path = buildCellPath(startCol, startRow, targetCell.col, targetCell.row, maxSteps);
+      if (!path.length && (startCol !== targetCell.col || startRow !== targetCell.row)) return;
       character.isMoving = true;
+      let stepIndex = 0;
       const stepMove = () => {
-        const nextCell = character.movePath?.shift();
+        const nextCell = path[stepIndex++];
         if (!nextCell) {
           character.isMoving = false;
-          const finishedCallback = character.moveTarget?.callback;
-          character.moveTarget = null;
-          if (finishedCallback) finishedCallback();
           renderWorldPreview();
+          if (callback) callback();
           return;
         }
         const nextPos = gridCellToScenePosition(nextCell.col, nextCell.row);
@@ -2114,11 +2111,13 @@
         character.gridRow = nextCell.row;
         character.sceneLeft = nextPos.left;
         character.sceneTop = nextPos.top;
+        character.localX = nextCell.col;
+        character.localY = nextCell.row;
         if (illustratedMapState.combat.active && illustratedMapState.combat.currentSide === 'player') {
           illustratedMapState.combat.mp = Math.max(0, illustratedMapState.combat.mp - 1);
         }
         renderMainScene();
-        setTimeout(stepMove, 110);
+        window.setTimeout(stepMove, 140);
       };
       stepMove();
     }
@@ -2358,13 +2357,11 @@
         const rect = event.currentTarget.getBoundingClientRect();
         const targetLeft = Math.max(12, Math.min(88, ((event.clientX - rect.left) / rect.width) * 100));
         const targetTop = Math.max(22, Math.min(82, ((event.clientY - rect.top) / rect.height) * 100));
-        if (illustratedMapState.combat.active && illustratedMapState.combat.currentSide === 'player') {
-          movePlayerToScenePercent(targetLeft, targetTop, () => {
-            if (illustratedMapState.combat.mp <= 0) endPlayerTurn();
-          });
-          return;
-        }
-        movePlayerToScenePercent(targetLeft, targetTop);
+        movePlayerToScenePercent(targetLeft, targetTop, () => {
+          if (illustratedMapState.combat.active && illustratedMapState.combat.currentSide === 'player' && illustratedMapState.combat.mp <= 0) {
+            endPlayerTurn();
+          }
+        });
       };
       renderSceneDialog();
     }
