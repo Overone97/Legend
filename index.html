@@ -757,7 +757,7 @@
       enemyByMap: {
         'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 9, y: 7, encounterKey: 'bosquet-trouble' }],
       },
-      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, phase: 'placement', reachableCells: [], previewPath: [], rangeCells: [], blockedCells: [{ col: 4, row: 5 }, { col: 5, row: 5 }, { col: 6, row: 5 }], timerId: null, currentSide: 'player', enemyAp: 4, enemyMp: 2, selectedSpell: 'jab', rewardPending: null },
+      combat: { active: false, encounterKey: null, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, phase: 'placement', reachableCells: [], previewPath: [], rangeCells: [], blockedCells: [], timerId: null, currentSide: 'player', enemyAp: 4, enemyMp: 2, selectedSpell: 'jab', rewardPending: null },
       npcPositions: {
         'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
         'atelier-ville': [{ name: 'Borin', x: 62, y: 52 }],
@@ -1951,15 +1951,8 @@
       let currentCol = startCol;
       let currentRow = startRow;
       while ((currentCol !== targetCol || currentRow !== targetRow) && path.length < maxSteps) {
-        let nextCol = currentCol;
-        let nextRow = currentRow;
-        if (currentCol < targetCol) nextCol += 1;
-        else if (currentCol > targetCol) nextCol -= 1;
-        else if (currentRow < targetRow) nextRow += 1;
-        else if (currentRow > targetRow) nextRow -= 1;
-        if (isBlockedCell(nextCol, nextRow)) break;
-        currentCol = nextCol;
-        currentRow = nextRow;
+        if (currentCol !== targetCol) currentCol += currentCol < targetCol ? 1 : -1;
+        else if (currentRow !== targetRow) currentRow += currentRow < targetRow ? 1 : -1;
         path.push({ col: currentCol, row: currentRow });
       }
       return path;
@@ -1980,7 +1973,7 @@
       for (let col = 0; col < BETA_GRID.cols; col += 1) {
         for (let row = 0; row < BETA_GRID.rows; row += 1) {
           const distance = Math.abs(col - originCol) + Math.abs(row - originRow);
-          if (distance > 0 && distance <= range && !isBlockedCell(col, row)) cells.push({ col, row });
+          if (distance > 0 && distance <= range) cells.push({ col, row });
         }
       }
       return cells;
@@ -2038,11 +2031,6 @@
       if (!enemy) return;
       if (illustratedMapState.combat.ap < spell.apCost) {
         setMessage('worldMessage', `Pas assez de PA pour ${spell.name}.`, 'error');
-        renderMainScene();
-        return;
-      }
-      if (isBlockedCell(enemy.x, enemy.y)) {
-        setMessage('worldMessage', `${enemy.name} est protégé par un obstacle.`, 'error');
         renderMainScene();
         return;
       }
@@ -2144,15 +2132,7 @@
         row: character.gridRow ?? scenePositionToGridCell(character.sceneLeft ?? 52, character.sceneTop ?? 67).row,
       };
       const maxSteps = illustratedMapState.combat.active ? (illustratedMapState.combat.phase === 'placement' ? 3 : (illustratedMapState.combat.currentSide === 'player' ? illustratedMapState.combat.mp : 0)) : Infinity;
-      if (isBlockedCell(targetCell.col, targetCell.row)) {
-        setMessage('worldMessage', 'Case bloquée.', 'error');
-        return;
-      }
       const path = buildCellPath(startCell.col, startCell.row, targetCell.col, targetCell.row, maxSteps);
-      if (!path.length && (startCell.col !== targetCell.col || startCell.row !== targetCell.row)) {
-        setMessage('worldMessage', 'Aucun chemin praticable.', 'error');
-        return;
-      }
       character.movePath = path;
       character.moveTarget = { callback };
       if (character.isMoving) return;
