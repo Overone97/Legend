@@ -1320,25 +1320,9 @@
         this.updateHUD();
       }
 
-      bindCombatUI() {
-        document.getElementById('startBtn').addEventListener('click', () => this.startBattle());
-        document.getElementById('endTurnBtn').addEventListener('click', () => this.endTurn());
-        this.canvas.addEventListener('mousemove', e => { this.hoverCell = this.eventToCell(e); this.render(); });
-        this.canvas.addEventListener('mouseleave', () => { this.hoverCell = null; this.render(); });
-        this.canvas.addEventListener('click', e => this.handleCanvasClick(e));
-      }
+      bindCombatUI() {}
 
-      renderClassChoices() {
-        const classGrid = document.getElementById('classGrid');
-        classGrid.innerHTML = '';
-        for (const [key, klass] of Object.entries(this.classes)) {
-          const card = document.createElement('button');
-          card.className = `class-card ${this.selectedClass === key ? 'active' : ''}`;
-          card.innerHTML = `<strong>${klass.name}</strong><small>HP ${klass.stats.maxHp} • AP ${klass.stats.ap} • MP ${klass.stats.mp} • SPD ${klass.stats.speed}</small><small>${klass.flavor}</small>`;
-          card.addEventListener('click', () => { this.selectedClass = key; this.renderClassChoices(); });
-          classGrid.appendChild(card);
-        }
-      }
+      renderClassChoices() {}
 
       startBattle(encounter = null) {
         const selected = this.classes[this.selectedClass];
@@ -2238,11 +2222,7 @@
       document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • écran ${positionKey} • case ${targetX}, ${targetY}`;
       movePlayerToScenePercent(18 + targetX * 16, 28 + targetY * 12, () => {
         if (!SAFE_ZONE.has(positionKey) && WORLD_ENCOUNTERS.has(positionKey) && targetX === 2 && targetY === 2) {
-          const encounter = ENCOUNTER_CONFIG[positionKey];
-          setMessage('worldMessage', `Rencontre : ${encounter?.name || 'ennemi inconnu'} sur ${character.mapId} !`, 'ok');
-          switchView('combatView');
-          game.setCharacter(character);
-          game.startBattle(encounter);
+          setMessage('worldMessage', `Zone de rencontre détectée sur ${character.mapId}, mais le nouveau combat n'est pas encore rebranché.`, 'ok');
           return;
         }
         setMessage('worldMessage', `${character.name} court sur ${character.mapId}.`, 'ok');
