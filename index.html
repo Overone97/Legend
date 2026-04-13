@@ -848,6 +848,7 @@
     };
 
     const BETA_SINGLE_MAP = 'bourg-centre';
+    const BETA_GRID = { cols: 12, rows: 12, left: 10, right: 88, top: 18, bottom: 88 };
     const STARTING_POSITION = { x: 0, y: 0, mapId: 'Bourg-Legend', mapKey: BETA_SINGLE_MAP };
     const SAFE_ZONE = new Set(['bourg-centre', 'bourg-sud', 'bourg-est', 'route-recrues']);
     const INITIAL_WORLD_ENCOUNTERS = ['bosquet-trouble', 'bourg-basses', 'route-rodeur', 'rives-claires', 'clairiere-braises'];
@@ -1842,47 +1843,70 @@
       return 'down';
     }
 
+    function gridCellToScenePosition(col, row) {
+      const cellWidth = (BETA_GRID.right - BETA_GRID.left) / (BETA_GRID.cols - 1);
+      const cellHeight = (BETA_GRID.bottom - BETA_GRID.top) / (BETA_GRID.rows - 1);
+      return {
+        left: BETA_GRID.left + (col * cellWidth),
+        top: BETA_GRID.top + (row * cellHeight),
+      };
+    }
+
+    function scenePositionToGridCell(left, top) {
+      const col = Math.max(0, Math.min(BETA_GRID.cols - 1, Math.round(((left - BETA_GRID.left) / (BETA_GRID.right - BETA_GRID.left)) * (BETA_GRID.cols - 1))));
+      const row = Math.max(0, Math.min(BETA_GRID.rows - 1, Math.round(((top - BETA_GRID.top) / (BETA_GRID.bottom - BETA_GRID.top)) * (BETA_GRID.rows - 1))));
+      return { col, row };
+    }
+
     function movePlayerToScenePercent(targetLeft, targetTop, callback = null) {
       const character = game.currentCharacter;
       if (!character) return;
-      const clampedLeft = Math.max(10, Math.min(88, targetLeft));
-      const clampedTop = Math.max(18, Math.min(88, targetTop));
-      character.moveTarget = { left: clampedLeft, top: clampedTop, callback };
+      const targetCell = scenePositionToGridCell(targetLeft, targetTop);
+      const startCell = {
+        col: character.gridCol ?? scenePositionToGridCell(character.sceneLeft ?? 52, character.sceneTop ?? 67).col,
+        row: character.gridRow ?? scenePositionToGridCell(character.sceneLeft ?? 52, character.sceneTop ?? 67).row,
+      };
+      const path = [];
+      let currentCol = startCell.col;
+      let currentRow = startCell.row;
+      while (currentCol !== targetCell.col || currentRow !== targetCell.row) {
+        if (currentCol < targetCell.col) currentCol += 1;
+        else if (currentCol > targetCell.col) currentCol -= 1;
+        if (currentRow < targetCell.row) currentRow += 1;
+        else if (currentRow > targetCell.row) currentRow -= 1;
+        path.push({ col: currentCol, row: currentRow });
+      }
+      character.movePath = path;
+      character.moveTarget = { callback };
       if (character.isMoving) return;
       character.isMoving = true;
 
       const stepMove = () => {
-        const currentLeft = character.sceneLeft ?? 52;
-        const currentTop = character.sceneTop ?? 67;
-        const dx = character.moveTarget.left - currentLeft;
-        const dy = character.moveTarget.top - currentTop;
-        const distance = Math.hypot(dx, dy);
-        if (distance < 1.2) {
-          character.sceneLeft = character.moveTarget.left;
-          character.sceneTop = character.moveTarget.top;
-          character.localX = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((character.sceneLeft - 18) / 16)));
-          character.localY = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((character.sceneTop - 28) / 12)));
+        const nextCell = character.movePath?.shift();
+        if (!nextCell) {
           character.isMoving = false;
-          renderMainScene();
-          const finishedCallback = character.moveTarget.callback;
+          const finishedCallback = character.moveTarget?.callback;
           character.moveTarget = null;
+          renderMainScene();
           if (finishedCallback) finishedCallback();
           renderWorldPreview();
           return;
         }
-        const step = Math.min(2.2, distance);
-        const nextLeft = currentLeft + (dx / distance) * step;
-        const nextTop = currentTop + (dy / distance) * step;
-        character.facing = getFacingDirection(currentLeft, currentTop, nextLeft, nextTop, character.facing || 'down');
-        character.sceneLeft = nextLeft;
-        character.sceneTop = nextTop;
-        character.localX = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((nextLeft - 18) / 16)));
-        character.localY = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((nextTop - 28) / 12)));
+        const currentLeft = character.sceneLeft ?? 52;
+        const currentTop = character.sceneTop ?? 67;
+        const nextPos = gridCellToScenePosition(nextCell.col, nextCell.row);
+        character.facing = getFacingDirection(currentLeft, currentTop, nextPos.left, nextPos.top, character.facing || 'down');
+        character.gridCol = nextCell.col;
+        character.gridRow = nextCell.row;
+        character.sceneLeft = nextPos.left;
+        character.sceneTop = nextPos.top;
+        character.localX = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((nextPos.left - 18) / 16)));
+        character.localY = Math.max(0, Math.min(LOCAL_SCREEN_SIZE - 1, Math.round((nextPos.top - 28) / 12)));
         renderMainScene();
-        requestAnimationFrame(stepMove);
+        setTimeout(stepMove, 110);
       };
 
-      requestAnimationFrame(stepMove);
+      stepMove();
     }
 
     function moveToScreen(direction) {
@@ -2026,11 +2050,17 @@
         backdrop.style.background = `${illustration.sky}, ${SCENE_BACKDROPS[biome] || SCENE_BACKDROPS.safe}`;
         backdrop.innerHTML = `<div class="scene-parallax">${(illustration.layers || []).map(layer => `<div class="scene-illustration-layer" style="${layer.style}"></div>`).join('')}</div>`;
       }
-      const playerLeft = character.sceneLeft ?? 52;
-      const playerTop = character.sceneTop ?? 67;
+      const defaultCellPos = gridCellToScenePosition(6, 8);
+      const playerLeft = character.sceneLeft ?? defaultCellPos.left;
+      const playerTop = character.sceneTop ?? defaultCellPos.top;
       const actorNodes = [`<div class="scene-actor player ${character.isMoving ? 'running' : ''}" data-facing="${character.facing || 'down'}" style="left:${playerLeft}%;top:${playerTop}%;"><button data-scene-type="player" data-name="${character.name}" data-map="${character.mapId}"><div class="scene-sprite"><div class="warrior-sprite"><div class="warrior-shadow"></div><div class="warrior-head"></div><div class="warrior-body"></div><div class="warrior-arm left"></div><div class="warrior-arm right"></div><div class="warrior-leg left"></div><div class="warrior-leg right"></div></div></div></button></div>`];
-      if (character.sceneLeft == null) character.sceneLeft = 52;
-      if (character.sceneTop == null) character.sceneTop = 67;
+      if (character.gridCol == null) character.gridCol = 6;
+      if (character.gridRow == null) character.gridRow = 8;
+      if (character.sceneLeft == null || character.sceneTop == null) {
+        const spawnPos = gridCellToScenePosition(character.gridCol, character.gridRow);
+        character.sceneLeft = spawnPos.left;
+        character.sceneTop = spawnPos.top;
+      }
       const enemies = illustratedMapState.enemyByMap[mapKey] || [];
       enemies.forEach(enemy => {
         actorNodes.push(`<div class="scene-enemy" style="left:${enemy.x}%;top:${enemy.y}%;"><button data-encounter-key="${enemy.encounterKey}"><div class="scene-sprite"><div class="enemy-sprite"><div class="enemy-shadow"></div><div class="enemy-head"></div><div class="enemy-body"></div><div class="enemy-leg left"></div><div class="enemy-leg right"></div></div></div><div class="scene-label">${enemy.name}</div></button></div>`);
