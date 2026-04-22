@@ -637,21 +637,15 @@
     };
 
     const MAPS = {
-      'bourg-centre': { name: 'Bourg-Legend', biome: 'safe', exits: { right: 'bourg-est', down: 'bourg-sud', left: 'bourg-ouest' }, gateLabels: { left: 'Quartier ouest' } },
-      'bourg-ouest': { name: 'Quartier ouest', biome: 'safe', exits: { right: 'bourg-centre', down: 'atelier-ville' }, gateLabels: { right: 'Place centrale', down: 'Vers l’atelier' } },
-      'atelier-ville': { name: 'Atelier de Bourg', biome: 'safe', exits: { up: 'bourg-ouest', right: 'bourg-sud' }, gateLabels: { up: 'Quartier ouest', right: 'Retour au sud' } },
-      'bourg-est': { name: 'Route est', biome: 'road', exits: { left: 'bourg-centre', right: 'porte-est', down: 'route-recrues' }, gateLabels: { right: 'Passage vers la porte', left: 'Retour place centrale' } },
-      'bourg-sud': { name: 'Bas-bourg', biome: 'safe', exits: { up: 'bourg-centre', right: 'route-recrues', down: 'bourg-basses', left: 'atelier-ville' }, gateLabels: { down: 'Vers les fourrés', up: 'Retour au centre', left: 'Atelier' } },
-      'route-recrues': { name: 'Route des recrues', biome: 'road', exits: { up: 'bourg-est', left: 'bourg-sud', right: 'porte-est', down: 'chemin-novices' } },
-      'porte-est': { name: 'Porte de l’est', biome: 'road', exits: { left: 'route-recrues', down: 'bosquet-trouble', right: 'rives-claires' }, gateLabels: { down: 'Vers le bosquet', right: 'Vers les rives' } },
-      'bosquet-trouble': { name: 'Bosquet trouble', biome: 'forest', exits: { up: 'porte-est', down: 'chemin-novices' } },
-      'chemin-novices': { name: 'Chemin des novices', biome: 'road', exits: { up: 'bosquet-trouble', right: 'lisiere-entrainement' } },
-      'lisiere-entrainement': { name: 'Lisière d’entraînement', biome: 'plains', exits: { left: 'chemin-novices', right: 'bois-heurts' } },
-      'bois-heurts': { name: 'Bois des heurts', biome: 'forest', exits: { left: 'lisiere-entrainement', right: 'clairiere-braises' } },
-      'rives-claires': { name: 'Rive bleue', biome: 'water', exits: { left: 'porte-est' } },
-      'clairiere-braises': { name: 'Clairière des braises', biome: 'fire', exits: { left: 'bois-heurts', right: 'route-rodeur' } },
-      'route-rodeur': { name: 'Route du rôdeur', biome: 'road', exits: { left: 'clairiere-braises' } },
-      'bourg-basses': { name: 'Fourré des pertes', biome: 'forest', exits: {} },
+      'carte-00': { name: 'Clairière barbe à papa', biome: 'safe', exits: { right: 'carte-10', down: 'carte-01' } },
+      'carte-10': { name: 'Allée des lucioles', biome: 'plains', exits: { left: 'carte-00', right: 'carte-20', down: 'carte-11' } },
+      'carte-20': { name: 'Pont mochi', biome: 'water', exits: { left: 'carte-10', down: 'carte-21' } },
+      'carte-01': { name: 'Place caramel', biome: 'safe', exits: { up: 'carte-00', right: 'carte-11', down: 'carte-02' } },
+      'carte-11': { name: 'Cœur de Poffin', biome: 'road', exits: { up: 'carte-10', right: 'carte-21', down: 'carte-12', left: 'carte-01' } },
+      'carte-21': { name: 'Jardin sakura', biome: 'forest', exits: { up: 'carte-20', left: 'carte-11', down: 'carte-22' } },
+      'carte-02': { name: 'Prairie melon', biome: 'plains', exits: { up: 'carte-01', right: 'carte-12' } },
+      'carte-12': { name: 'Sentier nougat', biome: 'fire', exits: { up: 'carte-11', left: 'carte-02', right: 'carte-22' } },
+      'carte-22': { name: 'Lagune étoilée', biome: 'water', exits: { up: 'carte-21', left: 'carte-12' } },
     };
 
 
@@ -706,21 +700,10 @@
 
     const dialogState = { visible: false, title: '', body: '', actions: [] };
     const illustratedMapState = {
-      enemyByMap: {
-        'bourg-centre': [{ id: 'enemy-training', name: 'Bandit suspect', x: 9, y: 7, encounterKey: 'bosquet-trouble' }],
-      },
+      enemyByMap: {},
       combat: { active: false, enemy: null, turn: 1, ap: 6, mp: 3, timer: 15, timerId: null, currentSide: 'player', selectedSpell: 'jab', rangeCells: [], previewPath: [] },
-      npcPositions: {
-        'bourg-centre': [{ name: 'Maël', x: 32, y: 54 }, { name: 'Sera', x: 18, y: 45 }],
-        'atelier-ville': [{ name: 'Borin', x: 62, y: 52 }],
-      },
-      landmarkPositions: {
-        'bourg-centre': { '1,1': { x: 16, y: 42 }, '3,1': { x: 20, y: 36 }, '2,3': { x: 84, y: 50 }, '0,2': { x: 28, y: 70 } },
-        'bourg-ouest': { '1,2': { x: 34, y: 56 }, '3,2': { x: 60, y: 44 } },
-        'atelier-ville': { '2,2': { x: 48, y: 50 }, '3,1': { x: 66, y: 38 } },
-        'route-recrues': { '2,0': { x: 42, y: 28 }, '2,2': { x: 76, y: 52 } },
-        'porte-est': { '2,2': { x: 82, y: 48 } },
-      },
+      npcPositions: {},
+      landmarkPositions: {},
     };
 
     function openSceneDialog(title, body, actions = []) {
@@ -761,47 +744,6 @@
     }
 
     const SCENE_ILLUSTRATIONS = {
-      'bourg-centre': {
-        sky: 'linear-gradient(180deg, rgba(241,245,249,0.95), rgba(226,232,240,0.55) 30%, rgba(203,213,225,0.1))',
-        layers: [
-          { style: 'left:4%;top:6%;width:26%;height:42%;background:radial-gradient(circle at 50% 40%, rgba(255,255,255,0.9), rgba(255,255,255,0));filter:blur(12px);opacity:0.55;' },
-          { style: 'left:0;bottom:0;width:34%;height:58%;background:linear-gradient(180deg, rgba(71,85,105,0), rgba(51,65,85,0.7)), linear-gradient(120deg, rgba(148,163,184,0.8), rgba(71,85,105,0.95));clip-path:polygon(0 100%, 0 35%, 20% 18%, 38% 0, 56% 16%, 74% 8%, 100% 34%, 100% 100%);' },
-          { style: 'left:26%;bottom:18%;width:28%;height:42%;background:linear-gradient(180deg, rgba(245,158,11,0.18), rgba(120,53,15,0.88)), linear-gradient(135deg, rgba(51,65,85,0.95), rgba(30,41,59,0.96));clip-path:polygon(18% 100%, 12% 38%, 50% 0, 88% 36%, 82% 100%);border:2px solid rgba(245,222,179,0.28);box-shadow:0 0 45px rgba(251,191,36,0.22);' },
-          { style: 'left:17%;bottom:14%;width:44%;height:18%;background:linear-gradient(90deg, rgba(148,163,184,0.15), rgba(229,231,235,0.75), rgba(148,163,184,0.12));clip-path:polygon(0 70%, 10% 40%, 26% 28%, 46% 45%, 65% 36%, 100% 55%, 100% 100%, 0 100%);' },
-          { style: 'right:12%;bottom:14%;width:18%;height:34%;background:linear-gradient(180deg, rgba(17,24,39,0.15), rgba(17,24,39,0.9));clip-path:polygon(50% 0, 100% 20%, 68% 100%, 32% 100%, 0 20%);' },
-        ],
-      },
-      'bourg-ouest': {
-        sky: 'linear-gradient(180deg, rgba(226,232,240,0.9), rgba(187,247,208,0.25) 32%, rgba(15,23,42,0.06))',
-        layers: [
-          { style: 'left:6%;bottom:0;width:28%;height:42%;background:linear-gradient(180deg, rgba(120,113,108,0), rgba(71,85,105,0.8));clip-path:polygon(8% 100%, 8% 46%, 28% 22%, 54% 12%, 82% 32%, 92% 100%);' },
-          { style: 'right:10%;bottom:0;width:24%;height:48%;background:linear-gradient(180deg, rgba(120,113,108,0), rgba(100,116,139,0.84));clip-path:polygon(12% 100%, 8% 44%, 34% 16%, 68% 20%, 88% 46%, 92% 100%);' },
-        ],
-      },
-      'atelier-ville': {
-        sky: 'linear-gradient(180deg, rgba(254,240,138,0.35), rgba(191,219,254,0.2) 30%, rgba(15,23,42,0.08))',
-        layers: [
-          { style: 'left:18%;bottom:0;width:30%;height:56%;background:linear-gradient(180deg, rgba(245,158,11,0.12), rgba(120,53,15,0.92));clip-path:polygon(16% 100%, 10% 34%, 50% 0, 90% 34%, 84% 100%);' },
-          { style: 'right:14%;bottom:0;width:18%;height:34%;background:linear-gradient(180deg, rgba(51,65,85,0.12), rgba(30,41,59,0.92));clip-path:polygon(22% 100%, 12% 42%, 50% 10%, 88% 42%, 78% 100%);' },
-        ],
-      },
-      'route-recrues': {
-        sky: 'linear-gradient(180deg, rgba(250,245,214,0.92), rgba(234,179,8,0.18) 32%, rgba(120,113,108,0.08))',
-        layers: [
-          { style: 'left:0;right:0;bottom:0;height:34%;background:linear-gradient(180deg, rgba(120,113,108,0), rgba(68,64,60,0.65)), repeating-linear-gradient(90deg, rgba(120,113,108,0.35), rgba(120,113,108,0.35) 6%, rgba(168,162,158,0.2) 6%, rgba(168,162,158,0.2) 12%);' },
-          { style: 'left:8%;bottom:18%;width:14%;height:26%;background:linear-gradient(180deg, rgba(251,191,36,0.18), rgba(120,53,15,0.85));clip-path:polygon(28% 100%, 18% 44%, 50% 0, 82% 44%, 72% 100%);' },
-          { style: 'right:10%;bottom:20%;width:22%;height:18%;background:linear-gradient(180deg, rgba(71,85,105,0.1), rgba(51,65,85,0.86));clip-path:polygon(0 100%, 10% 46%, 30% 34%, 48% 48%, 66% 24%, 84% 40%, 100% 30%, 100% 100%);' },
-        ],
-      },
-      'bosquet-trouble': {
-        sky: 'linear-gradient(180deg, rgba(196,181,253,0.18), rgba(20,83,45,0.16) 35%, rgba(17,24,39,0.1))',
-        layers: [
-          { style: 'left:-2%;bottom:0;width:24%;height:62%;background:linear-gradient(180deg, rgba(21,128,61,0), rgba(20,83,45,0.95));clip-path:polygon(44% 0, 80% 36%, 66% 100%, 20% 100%, 0 48%);' },
-          { style: 'left:16%;bottom:0;width:22%;height:72%;background:linear-gradient(180deg, rgba(21,128,61,0), rgba(6,78,59,0.96));clip-path:polygon(46% 0, 84% 32%, 72% 100%, 26% 100%, 4% 44%);' },
-          { style: 'right:8%;bottom:0;width:24%;height:68%;background:linear-gradient(180deg, rgba(21,128,61,0), rgba(20,83,45,0.96));clip-path:polygon(46% 0, 86% 30%, 72% 100%, 26% 100%, 4% 46%);' },
-          { style: 'left:26%;bottom:12%;width:28%;height:14%;background:linear-gradient(90deg, rgba(63,98,18,0.18), rgba(132,204,22,0.44), rgba(63,98,18,0.12));clip-path:polygon(0 76%, 20% 54%, 42% 60%, 56% 40%, 100% 52%, 100% 100%, 0 100%);' },
-        ],
-      },
       default: {
         sky: 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',
         layers: [],
@@ -817,93 +759,16 @@
       fire: 'linear-gradient(135deg, rgba(248,113,113,0.95), rgba(185,28,28,0.9) 45%, rgba(69,10,10,0.96))',
     };
 
-    const SCREEN_DECOR = {
-      'bourg-centre': {
-        landmarks: {
-          '1,1': { icon: '🏠', label: 'Maison du repos', type: 'Refuge' },
-          '3,1': { icon: '🛒', label: 'Échoppe', type: 'Marchand' },
-          '2,3': { icon: '🚪', label: 'Porte est', type: 'Sortie' },
-          '0,2': { icon: '🪵', label: 'Banc communal', type: 'Décor' },
-        },
-        npcs: [
-          { name: 'Maël', role: 'Guide', hint: 'Te pousse vers la route des recrues.', action: 'guide' },
-          { name: 'Sera', role: 'Marchande', hint: 'Tient le coin sûr de Bourg-Legend.', action: 'heal' },
-        ],
-      },
-      'route-recrues': {
-        landmarks: {
-          '2,0': { icon: '🪧', label: 'Panneau', type: 'Direction' },
-          '2,2': { icon: '⚑', label: 'Route des recrues', type: 'Passage' },
-        },
-        npcs: [
-          { name: 'Rouk', role: 'Éclaireur', hint: 'Préviens que la route devient moins gentille.', action: 'warn' },
-        ],
-      },
-      'porte-est': {
-        landmarks: {
-          '2,2': { icon: '🚪', label: 'Porte de l’est', type: 'Transition' },
-        },
-        npcs: [],
-      },
-      'bourg-ouest': {
-        landmarks: {
-          '1,2': { icon: '⛲', label: 'Petite fontaine', type: 'Fontaine', action: 'heal-fountain' },
-          '3,2': { icon: '🏡', label: 'Maisons basses', type: 'Habitat' },
-        },
-        npcs: [
-          { name: 'Lio', role: 'Habitant', hint: 'Profite du calme du quartier ouest.', action: 'guide' },
-        ],
-      },
-      'atelier-ville': {
-        landmarks: {
-          '2,2': { icon: '🛠', label: 'Atelier communal', type: 'Artisanat', action: 'open-craft' },
-          '3,1': { icon: '📦', label: 'Réserve', type: 'Stock', action: 'starter-kit' },
-        },
-        npcs: [
-          { name: 'Borin', role: 'Artisan', hint: 'Explique comment fabriquer ses premiers objets.', action: 'craft-help' },
-        ],
-      },
-      'bourg-ouest': {
-        landmarks: {
-          '1,2': { icon: '⛲', label: 'Petite fontaine', type: 'Décor' },
-          '3,2': { icon: '🏡', label: 'Maisons basses', type: 'Habitat' },
-        },
-        npcs: [
-          { name: 'Lio', role: 'Habitant', hint: 'Profite du calme du quartier ouest.', action: 'guide' },
-        ],
-      },
-      'atelier-ville': {
-        landmarks: {
-          '2,2': { icon: '🛠', label: 'Atelier communal', type: 'Artisanat' },
-          '3,1': { icon: '📦', label: 'Réserve', type: 'Stock' },
-        },
-        npcs: [
-          { name: 'Borin', role: 'Artisan', hint: 'Explique comment fabriquer ses premiers objets.', action: 'guide' },
-        ],
-      },
-    };
+    const SCREEN_DECOR = {};
 
-    const BETA_SINGLE_MAP = 'bourg-centre';
+    const BETA_SINGLE_MAP = 'carte-11';
     const BETA_GRID = { cols: 12, rows: 12, left: 10, right: 88, top: 18, bottom: 88 };
-    const STARTING_POSITION = { x: 0, y: 0, mapId: 'Bourg-Legend', mapKey: BETA_SINGLE_MAP };
-    const SAFE_ZONE = new Set(['bourg-centre', 'bourg-sud', 'bourg-est', 'route-recrues']);
-    const INITIAL_WORLD_ENCOUNTERS = ['bosquet-trouble', 'bourg-basses', 'route-rodeur', 'rives-claires', 'clairiere-braises'];
+    const STARTING_POSITION = { x: 0, y: 0, mapId: 'Cœur de Poffin', mapKey: BETA_SINGLE_MAP };
+    const SAFE_ZONE = new Set(Object.keys(MAPS));
+    const INITIAL_WORLD_ENCOUNTERS = [];
     const WORLD_ENCOUNTERS = new Set(INITIAL_WORLD_ENCOUNTERS);
-    const WORLD_TILE_TYPES = {
-      'bourg-centre': 'safe', 'bourg-est': 'road', '2,0': 'road', '3,0': 'road', '4,0': 'plains',
-      'bourg-sud': 'safe', 'route-recrues': 'road', 'porte-est': 'road', '3,1': 'plains', 'rives-claires': 'water',
-      '0,2': 'safe', '1,2': 'road', 'bosquet-trouble': 'forest', '3,2': 'plains', '4,2': 'water',
-      '0,3': 'safe', '1,3': 'road', 'chemin-novices': 'road', 'lisiere-entrainement': 'plains', 'bois-heurts': 'forest',
-      '5,3': 'forest', 'clairiere-braises': 'plains', 'route-rodeur': 'forest', '8,3': 'road',
-      'bourg-basses': 'forest', '5,5': 'plains', '6,5': 'road', '7,5': 'road'
-    };
-    const ENCOUNTER_CONFIG = {
-      'bosquet-trouble': { name: 'Brigand des taillis', hp: 80, ap: 5, mp: 3, speed: 8, xp: 18, resistances: { terre: 10 }, resources: [{ key: 'bois_sombre', name: 'Bois sombre', qty: 2 }, { key: 'ecorce_lourde', name: 'Écorce lourde', qty: 1 }], color: '#b45309', skill: { name: 'Coup bas', costAP: 4, range: 1, damage: 18, element: 'terre', description: 'Une attaque sale mais encore gérable.' } },
-      'bourg-basses': { name: 'Traqueur noir', hp: 120, ap: 7, mp: 4, speed: 11, xp: 40, resistances: { terre: 15, feu: -5 }, resources: [{ key: 'griffe_noire', name: 'Griffe noire', qty: 1 }, { key: 'peau_rapee', name: 'Peau râpée', qty: 2 }], color: '#7f1d1d', skill: { name: 'Entaille sauvage', costAP: 5, range: 1, damage: 30, element: 'terre', description: 'Une frappe violente pour les zones dangereuses.' } },
-      'route-rodeur': { name: 'Rôdeur des routes', hp: 95, ap: 6, mp: 4, speed: 10, xp: 28, resistances: { air: 10 }, resources: [{ key: 'fer_use', name: 'Fer usé', qty: 2 }, { key: 'plume_rapide', name: 'Plume rapide', qty: 1 }], color: '#1d4ed8', skill: { name: 'Jet de lame', costAP: 4, range: 3, damage: 22, element: 'air', description: 'Un projectile rapide qui punit les distances mal gérées.' } },
-      'rives-claires': { name: 'Ondine des rives', hp: 88, ap: 6, mp: 4, speed: 9, xp: 24, resistances: { eau: 20, feu: -10 }, resources: [{ key: 'perle_froide', name: 'Perle froide', qty: 1 }], color: '#0ea5e9', skill: { name: 'Jet d’écume', costAP: 4, range: 3, damage: 20, element: 'eau', description: 'Une attaque d’eau vive qui use à distance.' } },
-      'clairiere-braises': { name: 'Cendrelame', hp: 100, ap: 7, mp: 3, speed: 10, xp: 30, resistances: { feu: 18, eau: -10 }, resources: [{ key: 'braise_tiede', name: 'Braise tiède', qty: 2 }], color: '#dc2626', skill: { name: 'Lame ardente', costAP: 5, range: 2, damage: 24, element: 'feu', description: 'Une coupe embrasée qui annonce des ennemis plus agressifs.' } },
-    };
+    const WORLD_TILE_TYPES = {};
+    const ENCOUNTER_CONFIG = {};
 
     const CRAFT_RECIPES = [
       { key: 'amulette_bois', name: 'Amulette en bois sombre', costs: [{ key: 'bois_sombre', qty: 2 }], reward: { key: 'amulette_bois', name: 'Amulette en bois sombre', qty: 1, slot: 'amulette', set: 'forestier', resistances: { terre: 5 } } },
@@ -957,66 +822,15 @@
     };
 
     const WORLD_POI = {
-      'bourg-centre': {
-        name: 'Bourg-Legend',
-        type: 'Ville de départ',
-        description: 'Le premier refuge du joueur. Ici, on souffle, on se prépare, et on repart vers la route.',
-      },
-      'bourg-ouest': {
-        name: 'Quartier ouest',
-        type: 'Quartier résidentiel',
-        description: 'Un coin plus calme de Bourg-Legend, avec quelques habitants et un rythme plus doux.',
-      },
-      'atelier-ville': {
-        name: 'Atelier de Bourg',
-        type: 'Artisanat',
-        description: 'Le cœur manuel de la ville, là où le craft commence à devenir concret.',
-      },
-      'route-recrues': {
-        name: 'Route des recrues',
-        type: 'Route',
-        description: 'Le chemin le plus sûr pour quitter la ville sans se faire ouvrir trop vite.',
-      },
-      'porte-est': {
-        name: 'Porte de l’est',
-        type: 'Sortie de ville',
-        description: 'Le passage naturel pour quitter Bourg-Legend et comprendre où l’aventure commence vraiment.',
-      },
-      'bosquet-trouble': {
-        name: 'Bosquet trouble',
-        type: 'Zone dangereuse',
-        description: 'Un coin boisé où les embuscades sont fréquentes. Clairement pas un endroit pour flâner.',
-      },
-      'chemin-novices': {
-        name: 'Chemin des novices',
-        type: 'Route guidée',
-        description: 'Une continuité rassurante entre la ville sûre et les premières zones un peu plus hostiles.',
-      },
-      'lisiere-entrainement': {
-        name: 'Lisière d’entraînement',
-        type: 'Zone d’apprentissage',
-        description: 'Les premiers vrais pas hors protection. Assez calme pour apprendre, pas assez calme pour dormir.',
-      },
-      'bois-heurts': {
-        name: 'Bois des heurts',
-        type: 'Zone de risque moyen',
-        description: 'On sent tout de suite que les choses deviennent moins gentilles. Ici, tu n’es plus vraiment chez toi.',
-      },
-      'bourg-basses': {
-        name: 'Fourré des pertes',
-        type: 'Zone dangereuse',
-        description: 'Une poche plus profonde de danger. Si tu y vas trop tôt, tu vas le sentir passer.',
-      },
-      'rives-claires': {
-        name: 'Rive bleue',
-        type: 'Zone aquatique',
-        description: 'Un bord d’eau calme en apparence, mais parfait pour introduire des menaces liées à l’élément eau.',
-      },
-      'clairiere-braises': {
-        name: 'Clairière des braises',
-        type: 'Zone élémentaire feu',
-        description: 'Un terrain plus chaud, plus sec, où les ennemis commencent à brûler autant qu’ils frappent.',
-      }
+      'carte-00': { name: 'Clairière barbe à papa', type: 'Zone douce', description: 'Une entrée toute rose, calme et lisible.' },
+      'carte-10': { name: 'Allée des lucioles', type: 'Passage central', description: 'Une route légère pour connecter le haut de la grille.' },
+      'carte-20': { name: 'Pont mochi', type: 'Zone aquatique', description: 'Le coin bleu qui ferme le haut de la carte.' },
+      'carte-01': { name: 'Place caramel', type: 'Zone sûre', description: 'Une place centrale gauche, simple et chaleureuse.' },
+      'carte-11': { name: 'Cœur de Poffin', type: 'Hub', description: 'Le centre du monde 3x3, parfait comme point de départ.' },
+      'carte-21': { name: 'Jardin sakura', type: 'Zone forêt', description: 'Un coin fleuri et lisible pour varier le décor.' },
+      'carte-02': { name: 'Prairie melon', type: 'Zone prairie', description: 'Une zone basse gauche lumineuse et facile à repérer.' },
+      'carte-12': { name: 'Sentier nougat', type: 'Zone chaude', description: 'Le passage bas central avec une teinte plus punchy.' },
+      'carte-22': { name: 'Lagune étoilée', type: 'Zone finale', description: 'Le coin bas droit, doux et aquatique.' },
     };
 
     const localAccountStore = {
@@ -2038,10 +1852,36 @@
       if (callback) callback();
     }
 
+    function getMapTransitionSpawn(direction, currentCol, currentRow) {
+      const clamp = value => Math.max(1, Math.min(BETA_GRID.cols - 2, value));
+      if (direction === 'left') return { col: BETA_GRID.cols - 2, row: clamp(currentRow) };
+      if (direction === 'right') return { col: 1, row: clamp(currentRow) };
+      if (direction === 'up') return { col: clamp(currentCol), row: BETA_GRID.rows - 2 };
+      return { col: clamp(currentCol), row: 1 };
+    }
+
     function moveToScreen(direction) {
       const character = game.currentCharacter;
       if (!character) return;
-      setMessage('worldMessage', `Direction ${direction} indisponible dans ce prototype neuf.`, 'error');
+      const currentMapKey = character.mapKey || STARTING_POSITION.mapKey;
+      const nextMapKey = MAPS[currentMapKey]?.exits?.[direction];
+      if (!nextMapKey) {
+        setMessage('worldMessage', `Pas de carte sur le bord ${direction}.`, 'error');
+        return;
+      }
+      const spawn = getMapTransitionSpawn(direction, character.gridCol ?? 6, character.gridRow ?? 8);
+      const nextPos = gridCellToScenePosition(spawn.col, spawn.row);
+      character.mapKey = nextMapKey;
+      character.mapId = MAPS[nextMapKey].name;
+      character.gridCol = spawn.col;
+      character.gridRow = spawn.row;
+      character.localX = spawn.col;
+      character.localY = spawn.row;
+      character.sceneLeft = nextPos.left;
+      character.sceneTop = nextPos.top;
+      document.getElementById('shellStatus').textContent = `Personnage actif : ${character.name} (${character.class}) • ${character.mapId}`;
+      setMessage('worldMessage', `${character.name} arrive sur ${character.mapId}.`, 'ok');
+      renderWorldPreview();
     }
 
     function renderGameHud() {
@@ -2051,15 +1891,16 @@
         panel.innerHTML = '<div class="hud-card"><div class="hint">Choisis un personnage pour lancer le nouveau prototype.</div></div>';
         return;
       }
+      const currentMap = MAPS[character.mapKey || STARTING_POSITION.mapKey];
       panel.innerHTML = `
         <div class="hud-card">
           <div class="hud-title"><strong>${character.name}</strong><span class="badge">Niv. ${character.level || 1}</span></div>
           <div class="badge-row">
-            <span class="badge">Map propre</span>
-            <span class="badge">Prototype neuf</span>
+            <span class="badge">${currentMap?.name || 'Carte inconnue'}</span>
+            <span class="badge">Monde 3x3</span>
             <span class="badge">XP ${character.xp || 0}</span>
           </div>
-          <div class="hint">Objectif actuel : juste faire bouger le personnage proprement sur la carte.</div>
+          <div class="hint">9 cartes arcade kawai, transitions bord à bord, base stable pour la suite.</div>
         </div>
       `;
     }
@@ -2072,9 +1913,29 @@
       const sceneGrid = document.getElementById('sceneGrid');
       const combatOverlayHud = document.getElementById('combatOverlayHud');
       const scenePathOverlay = document.getElementById('scenePathOverlay');
-      backdrop.className = 'scene-backdrop beta-map';
-      backdrop.style.background = '';
-      backdrop.innerHTML = '';
+      const currentMapKey = character?.mapKey || STARTING_POSITION.mapKey;
+      const currentMap = MAPS[currentMapKey] || MAPS[STARTING_POSITION.mapKey];
+      const biomePalette = {
+        safe: 'linear-gradient(180deg, #fce7f3 0%, #f9a8d4 45%, #f472b6 100%)',
+        plains: 'linear-gradient(180deg, #fde68a 0%, #86efac 55%, #4ade80 100%)',
+        road: 'linear-gradient(180deg, #fed7aa 0%, #fdba74 55%, #fb923c 100%)',
+        forest: 'linear-gradient(180deg, #bbf7d0 0%, #86efac 40%, #34d399 100%)',
+        water: 'linear-gradient(180deg, #bfdbfe 0%, #93c5fd 45%, #38bdf8 100%)',
+        fire: 'linear-gradient(180deg, #fdba74 0%, #fb7185 50%, #f43f5e 100%)',
+      };
+      const decorByBiome = {
+        safe: ['☁️','🍬','⭐','🏠','🌸'],
+        plains: ['🌼','🍀','🐣','✨','🌷'],
+        road: ['🪧','🍪','🧁','✨','🛤️'],
+        forest: ['🌳','🍃','🦋','🌸','🍄'],
+        water: ['💧','🐟','🫧','🌊','⭐'],
+        fire: ['🔥','🍓','✨','🌺','💥'],
+      };
+      backdrop.className = 'scene-backdrop';
+      backdrop.style.background = biomePalette[currentMap.biome] || biomePalette.safe;
+      backdrop.innerHTML = (decorByBiome[currentMap.biome] || decorByBiome.safe)
+        .map((icon, index) => `<div class="scene-illustration-layer" style="left:${8 + (index * 18)}%;top:${10 + ((index % 2) * 24)}%;font-size:${30 + ((index % 3) * 10)}px;opacity:0.9;filter:drop-shadow(0 8px 10px rgba(255,255,255,0.18));">${icon}</div>`)
+        .join('');
       sceneGrid.classList.remove('combat-mode');
       combatOverlayHud.classList.remove('visible');
       combatOverlayHud.innerHTML = '';
@@ -2091,13 +1952,32 @@
         character.sceneLeft = spawnPos.left;
         character.sceneTop = spawnPos.top;
       }
-      actors.innerHTML = `<div class="scene-actor player" style="left:${character.sceneLeft}%;top:${character.sceneTop}%;"><div class="scene-sprite"><div class="warrior-sprite"><div class="warrior-shadow"></div><div class="warrior-head"></div><div class="warrior-body"></div><div class="warrior-arm left"></div><div class="warrior-arm right"></div><div class="warrior-leg left"></div><div class="warrior-leg right"></div></div></div><div class="scene-label">${character.name}</div></div>`;
+      const exits = currentMap.exits || {};
+      actors.innerHTML = `
+        <div class="scene-actor player" style="left:${character.sceneLeft}%;top:${character.sceneTop}%;"><div class="scene-sprite"><div class="warrior-sprite"><div class="warrior-shadow"></div><div class="warrior-head"></div><div class="warrior-body"></div><div class="warrior-arm left"></div><div class="warrior-arm right"></div><div class="warrior-leg left"></div><div class="warrior-leg right"></div></div></div><div class="scene-label">${character.name}</div></div>
+        <div style="position:absolute;left:18px;right:18px;top:18px;z-index:6;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start;">
+          <div>${exits.left ? `<button class="ghost" data-screen-dir="left">⬅ ${MAPS[exits.left].name}</button>` : ''}</div>
+          <div style="display:grid;gap:8px;justify-items:center;">
+            ${exits.up ? `<button class="ghost" data-screen-dir="up">⬆ ${MAPS[exits.up].name}</button>` : ''}
+            <div class="scene-label">${currentMap.name}</div>
+            ${exits.down ? `<button class="ghost" data-screen-dir="down">⬇ ${MAPS[exits.down].name}</button>` : ''}
+          </div>
+          <div style="display:flex;justify-content:flex-end;">${exits.right ? `<button class="ghost" data-screen-dir="right">${MAPS[exits.right].name} ➡</button>` : ''}</div>
+        </div>
+      `;
+      actors.querySelectorAll('[data-screen-dir]').forEach(button => button.addEventListener('click', () => moveToScreen(button.dataset.screenDir)));
       hitbox.onmousemove = null;
       hitbox.onclick = event => {
         const rect = event.currentTarget.getBoundingClientRect();
-        const targetLeft = Math.max(12, Math.min(88, ((event.clientX - rect.left) / rect.width) * 100));
-        const targetTop = Math.max(22, Math.min(82, ((event.clientY - rect.top) / rect.height) * 100));
-        setMessage('worldMessage', `Déplacement simple vers ${Math.round(targetLeft)}%, ${Math.round(targetTop)}.`, 'ok');
+        const rawLeft = ((event.clientX - rect.left) / rect.width) * 100;
+        const rawTop = ((event.clientY - rect.top) / rect.height) * 100;
+        const targetLeft = Math.max(12, Math.min(88, rawLeft));
+        const targetTop = Math.max(22, Math.min(82, rawTop));
+        if (rawLeft <= 4 && exits.left) return moveToScreen('left');
+        if (rawLeft >= 96 && exits.right) return moveToScreen('right');
+        if (rawTop <= 6 && exits.up) return moveToScreen('up');
+        if (rawTop >= 94 && exits.down) return moveToScreen('down');
+        setMessage('worldMessage', `Déplacement simple sur ${currentMap.name}.`, 'ok');
         movePlayerToScenePercent(targetLeft, targetTop);
       };
     }
